@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | MW Solar{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="dashboardData()">
+    
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4" data-aos="fade-down">
+        <div>
+            <h1 class="text-3xl font-bold text-white tracking-tight">Dynamic Solar Simulator</h1>
+            <p class="text-gray-400 mt-1">Adjust variables to simulate your solar plant's performance and ROI in real-time.</p>
+        </div>
+    </div>
+
+    <!-- Unified Inputs Panel -->
+    <div class="glass-card rounded-2xl overflow-hidden mb-8 border border-blue-500/30">
+        <div class="p-6 border-b border-gray-800 bg-blue-900/10">
+            <h3 class="text-xl font-bold text-blue-400"><i class="fa-solid fa-sliders mr-2"></i> Project Parameters</h3>
+            <p class="text-sm text-gray-400 mt-1">Change any value below. The entire dashboard will instantly recalculate.</p>
+        </div>
+        <div class="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Project Cost (₹)</label>
+                <input type="number" x-model.number="projectCost" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Expected Monthly Gen (kWh)</label>
+                <input type="number" x-model.number="expectedMonthlyGen" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Own Usage (kWh/mo)</label>
+                <input type="number" x-model.number="ownUsage" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Tariff Rate (₹/kWh)</label>
+                <input type="number" step="0.1" x-model.number="tariffRate" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Maintenance Expense (%)</label>
+                <input type="number" step="0.1" x-model.number="maintPct" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-400 mb-2">Tax (%)</label>
+                <input type="number" step="0.1" x-model.number="taxPct" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+            </div>
+        </div>
+    </div>
+
+    <!-- 6 KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div class="glass-card rounded-xl p-5 border-l-4 border-blue-500">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Project Cost</p>
+            <h3 class="text-2xl font-bold text-white">₹<span x-text="formatCurrency(projectCost)"></span></h3>
+        </div>
+        <div class="glass-card rounded-xl p-5 border-l-4 border-yellow-500">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Today's Gen (Est.)</p>
+            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber(expectedMonthlyGen / 30)"></span> kWh</h3>
+        </div>
+        <div class="glass-card rounded-xl p-5 border-l-4 border-yellow-500">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Monthly Gen</p>
+            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber(expectedMonthlyGen)"></span> kWh</h3>
+        </div>
+        <div class="glass-card rounded-xl p-5 border-l-4 border-emerald-500">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Own Usage</p>
+            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber(ownUsage)"></span> kWh</h3>
+        </div>
+        <div class="glass-card rounded-xl p-5 border-l-4 border-red-500">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Maintenance (Mo)</p>
+            <h3 class="text-2xl font-bold text-white">₹<span x-text="formatCurrency(grossRevenueMonthly * (maintPct/100))"></span></h3>
+        </div>
+        <div class="glass-card rounded-xl p-5 border-l-4 border-blue-400">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Monthly Exported</p>
+            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber(monthlyExported)"></span> kWh</h3>
+        </div>
+    </div>
+
+    <!-- Live Year-Wise Table and Break-Even -->
+    <div class="glass-card rounded-2xl overflow-hidden mb-8 border border-gray-800">
+        <div class="p-6 border-b border-gray-800 flex justify-between items-center bg-gray-900/30">
+            <div>
+                <h3 class="text-xl font-bold text-emerald-400">Break-Even: <span x-text="breakEvenText"></span></h3>
+                <p class="text-sm text-gray-400 mt-1">Yearly Breakdown of ROI and Profit based on current inputs.</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Projected Yearly Profit</p>
+                <h4 class="text-xl font-bold text-white">₹<span x-text="formatCurrency(netYearlyProfit)"></span></h4>
+            </div>
+        </div>
+        <div class="overflow-y-auto max-h-80">
+            <table class="w-full text-left border-collapse">
+                <thead class="sticky top-0 bg-gray-900">
+                    <tr class="text-gray-400 text-xs uppercase tracking-wider border-b border-gray-800">
+                        <th class="px-6 py-4 font-medium">Year</th>
+                        <th class="px-6 py-4 font-medium">Yearly Profit</th>
+                        <th class="px-6 py-4 font-medium">Cumulative Profit</th>
+                        <th class="px-6 py-4 font-medium">ROI</th>
+                        <th class="px-6 py-4 font-medium">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    <template x-for="p in projections" :key="p.year">
+                        <tr :class="p.isBreakEven ? 'bg-emerald-900/20' : 'hover:bg-gray-800/30'" class="transition-colors">
+                            <td class="px-6 py-4 text-sm text-gray-300 font-medium">Year <span x-text="p.year"></span></td>
+                            <td class="px-6 py-4 text-sm text-emerald-400">₹<span x-text="formatCurrency(p.profit)"></span></td>
+                            <td class="px-6 py-4 text-sm text-blue-400">₹<span x-text="formatCurrency(p.cumulative)"></span></td>
+                            <td class="px-6 py-4 text-sm"><span x-text="formatNumber(p.roi)"></span>%</td>
+                            <td class="px-6 py-4 text-sm">
+                                <span x-show="p.isBreakEven" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    <i class="fa-solid fa-check mr-1"></i> Cost Recovered
+                                </span>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Dynamic Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="glass-card rounded-2xl p-6">
+            <h3 class="text-lg font-medium text-gray-200 mb-4">Cumulative Savings Milestone</h3>
+            <div id="chartInvestmentGrowth" class="w-full h-64"></div>
+        </div>
+        <div class="glass-card rounded-2xl p-6">
+            <h3 class="text-lg font-medium text-gray-200 mb-4">Financial Breakdown (20y)</h3>
+            <div id="chartFinancialBreakdown" class="w-full h-64 flex justify-center items-center"></div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function dashboardData() {
+        return {
+            projectCost: {{ project_cost|default:500000|floatformat:0 }},
+            expectedMonthlyGen: {{ monthly_generation|default:1000|floatformat:2 }},
+            ownUsage: {{ own_usage|default:200|floatformat:2 }},
+            tariffRate: {{ latest_tariff_rate|default:5.5|floatformat:2 }},
+            maintPct: {{ latest_maintenance_pct|default:5.0|floatformat:2 }},
+            taxPct: {{ latest_tax_pct|default:0|floatformat:2 }},
+            
+            chartInvGrowth: null,
+            chartFinBreakdown: null,
+            
+            formatCurrency(value) {
+                return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value);
+            },
+            
+            formatNumber(value, digits=1) {
+                return new Intl.NumberFormat('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
+            },
+            
+            init() {
+                this.$watch('projectCost', () => this.updateCharts());
+                this.$watch('expectedMonthlyGen', () => this.updateCharts());
+                this.$watch('ownUsage', () => this.updateCharts());
+                this.$watch('tariffRate', () => this.updateCharts());
+                this.$watch('maintPct', () => this.updateCharts());
+                this.$watch('taxPct', () => this.updateCharts());
+                
+                setTimeout(() => {
+                    this.initCharts();
+                }, 100);
+            },
+            
+            get monthlyExported() {
+                return Math.max(0, this.expectedMonthlyGen - this.ownUsage);
+            },
+            get grossRevenueMonthly() {
+                return this.monthlyExported * this.tariffRate;
+            },
+            get netYearlyProfit() {
+                const gross = this.grossRevenueMonthly * 12;
+                const maint = gross * (this.maintPct / 100);
+                const tax = gross * (this.taxPct / 100);
+                return gross - maint - tax;
+            },
+            get projections() {
+                let data = [];
+                let cumulative = 0;
+                let profit = this.netYearlyProfit;
+                let breakEvenYear = 0;
+                
+                for(let i=1; i<=20; i++) {
+                    cumulative += profit;
+                    let roi = this.projectCost > 0 ? (profit / this.projectCost) * 100 : 0;
+                    
+                    let isBreakEven = false;
+                    if (breakEvenYear === 0 && cumulative >= this.projectCost && profit > 0) {
+                        isBreakEven = true;
+                        breakEvenYear = i;
+                    }
+                    
+                    data.push({
+                        year: i,
+                        profit: profit,
+                        cumulative: cumulative,
+                        roi: roi,
+                        isBreakEven: isBreakEven
+                    });
+                }
+                return data;
+            },
+            get breakEvenText() {
+                let profit = this.netYearlyProfit;
+                if (profit <= 0) return "Never (No Profit)";
+                let years = this.projectCost / profit;
+                let wholeYears = Math.floor(years);
+                let months = Math.ceil((years - wholeYears) * 12);
+                if (months === 12) {
+                    wholeYears += 1;
+                    months = 0;
+                }
+                return `${wholeYears} Years, ${months} Months`;
+            },
+            
+            initCharts() {
+                if(typeof ApexCharts === 'undefined') return;
+                
+                const areaOptions = {
+                    series: [],
+                    chart: { type: 'area', height: '100%', parentHeightOffset: 0, toolbar: { show: false }, foreColor: '#9ca3af', animations: { enabled: true, easing: 'easeinout', speed: 800 } },
+                    colors: ['#8b5cf6', '#ef4444'],
+                    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05 } },
+                    dataLabels: { enabled: false }, stroke: { curve: 'smooth', width: 2 },
+                    xaxis: { categories: ['Year 1', 'Year 5', 'Year 10', 'Year 15', 'Year 20'], axisBorder: { show: false }, axisTicks: { show: false } },
+                    yaxis: { labels: { formatter: (value) => { return "₹" + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value); } } },
+                    grid: { borderColor: 'rgba(255,255,255,0.05)', strokeDashArray: 4 },
+                    legend: { position: 'top', horizontalAlign: 'right' }, tooltip: { theme: 'dark', y: { formatter: (value) => { return "₹" + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value); } } }
+                };
+                this.chartInvGrowth = new ApexCharts(document.querySelector("#chartInvestmentGrowth"), areaOptions);
+                this.chartInvGrowth.render();
+
+                const donutOptions = {
+                    series: [],
+                    labels: ['Net Profit', 'Maintenance', 'Tax'],
+                    chart: { type: 'donut', height: '100%', foreColor: '#9ca3af', animations: { speed: 800 } },
+                    colors: ['#10b981', '#f59e0b', '#ef4444'],
+                    plotOptions: { pie: { donut: { size: '75%', background: 'transparent' } } },
+                    dataLabels: { enabled: false }, stroke: { show: false }, legend: { position: 'bottom' }, tooltip: { theme: 'dark', y: { formatter: (value) => { return "₹" + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value); } } }
+                };
+                this.chartFinBreakdown = new ApexCharts(document.querySelector("#chartFinancialBreakdown"), donutOptions);
+                this.chartFinBreakdown.render();
+                
+                this.updateCharts();
+            },
+            
+            updateCharts() {
+                if (!this.chartInvGrowth || !this.chartFinBreakdown) return;
+                
+                let p = this.projections;
+                let c_y1 = p.length >= 1 ? p[0].cumulative : 0;
+                let c_y5 = p.length >= 5 ? p[4].cumulative : 0;
+                let c_y10 = p.length >= 10 ? p[9].cumulative : 0;
+                let c_y15 = p.length >= 15 ? p[14].cumulative : 0;
+                let c_y20 = p.length >= 20 ? p[19].cumulative : 0;
+                
+                this.chartInvGrowth.updateSeries([
+                    { name: 'Cumulative Savings', data: [c_y1, c_y5, c_y10, c_y15, c_y20] },
+                    { name: 'Investment Cost', data: [this.projectCost, this.projectCost, this.projectCost, this.projectCost, this.projectCost] }
+                ]);
+                
+                const gross = this.grossRevenueMonthly * 12 * 20; // 20 year gross
+                const maint = gross * (this.maintPct / 100);
+                const tax = gross * (this.taxPct / 100);
+                const net = gross - maint - tax;
+                
+                this.chartFinBreakdown.updateSeries([net, maint, tax]);
+            }
+        }
+    }
+</script>
+{% endblock %}
