@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-62#r0du#zdehin@nbu+gminu(wi_!9h31-e&lomh3vl7ed)d83
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['mw-solar-2-mbof.vercel.app']
 
 
 # Application definition
