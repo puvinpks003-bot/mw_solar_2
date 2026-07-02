@@ -10,39 +10,53 @@
             <h1 class="text-3xl font-bold text-white tracking-tight">Dynamic Solar Simulator</h1>
             <p class="text-gray-400 mt-1">Adjust variables to simulate your solar plant's performance and ROI in real-time.</p>
         </div>
-    </div>
+    </div>  
 
-    <!-- Unified Inputs Panel -->
-    <div class="glass-card rounded-2xl overflow-hidden mb-8 border border-blue-500/30">
-        <div class="p-6 border-b border-gray-800 bg-blue-900/10">
-            <h3 class="text-xl font-bold text-blue-400"><i class="fa-solid fa-sliders mr-2"></i> Project Parameters</h3>
-            <p class="text-sm text-gray-400 mt-1">Change any value below. The entire dashboard will instantly recalculate.</p>
+    <!-- Unified Inputs Panel (Python Driven) -->
+    <div x-data="{ isParamsOpen: true }" class="glass-card rounded-2xl overflow-hidden mb-8 border border-blue-500/30">
+        <div @click="isParamsOpen = !isParamsOpen" class="p-6 border-b border-gray-800 bg-blue-900/10 cursor-pointer flex justify-between items-center hover:bg-blue-900/20 transition-colors">
+            <div>
+                <h3 class="text-xl font-bold text-blue-400"><i class="fa-solid fa-sliders mr-2"></i> Project Parameters</h3>
+                <p class="text-sm text-gray-400 mt-1">Change any value below and click Update to recalculate projections via the server.</p>
+            </div>
+            <div>
+                <i class="fa-solid text-gray-400 transition-transform" :class="isParamsOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </div>
         </div>
-        <div class="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-2">Project Cost (₹)</label>
-                <input type="number" x-model.number="projectCost" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-2">Expected Monthly Gen (kWh)</label>
-                <input type="number" x-model.number="expectedMonthlyGen" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-2">Own Usage (kWh/mo)</label>
-                <input type="number" x-model.number="ownUsage" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-2">Tariff Rate (₹/kWh)</label>
-                <input type="number" step="0.1" x-model.number="tariffRate" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-2">Maintenance Expense (%)</label>
-                <input type="number" step="0.1" x-model.number="maintPct" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-400 mb-2">Tax (%)</label>
-                <input type="number" step="0.1" x-model.number="taxPct" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
-            </div>
+        <div x-show="isParamsOpen" x-transition class="p-6">
+            <form method="GET" action="{% url 'dashboard' %}">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Project Cost (₹)</label>
+                        <input type="number" name="project_cost" value="{{ sim_project_cost|stringformat:'.0f' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Expected Monthly Gen (kWh)</label>
+                        <input type="number" name="monthly_gen" value="{{ sim_monthly_gen|stringformat:'.2f' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Own Usage (kWh/mo)</label>
+                        <input type="number" name="own_usage" value="{{ sim_own_usage|stringformat:'.2f' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Tariff Rate (₹/kWh)</label>
+                        <input type="number" step="0.1" name="tariff_rate" value="{{ sim_tariff_rate|stringformat:'.2f' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Maintenance Expense (%)</label>
+                        <input type="number" step="0.1" name="maint_pct" value="{{ sim_maint_pct|stringformat:'.2f' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Tax (%)</label>
+                        <input type="number" step="0.1" name="tax_pct" value="{{ sim_tax_pct|stringformat:'.2f' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-xl transition-colors shadow-lg shadow-blue-500/30">
+                        <i class="fa-solid fa-rotate mr-2"></i> Update Simulation
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -50,27 +64,27 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <div class="glass-card rounded-xl p-5 border-l-4 border-blue-500">
             <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Project Cost</p>
-            <h3 class="text-2xl font-bold text-white">₹<span x-text="formatCurrency(projectCost)"></span></h3>
+            <h3 class="text-2xl font-bold text-white">₹<span x-text="formatCurrency({{ sim_project_cost }})"></span></h3>
         </div>
         <div class="glass-card rounded-xl p-5 border-l-4 border-yellow-500">
             <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Today's Gen (Est.)</p>
-            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber(expectedMonthlyGen / 30)"></span> kWh</h3>
+            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_monthly_gen }} / 30)"></span> kWh</h3>
         </div>
         <div class="glass-card rounded-xl p-5 border-l-4 border-yellow-500">
             <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Monthly Gen</p>
-            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber(expectedMonthlyGen)"></span> kWh</h3>
+            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_monthly_gen }})"></span> kWh</h3>
         </div>
         <div class="glass-card rounded-xl p-5 border-l-4 border-emerald-500">
             <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Own Usage</p>
-            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber(ownUsage)"></span> kWh</h3>
+            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_own_usage }})"></span> kWh</h3>
         </div>
         <div class="glass-card rounded-xl p-5 border-l-4 border-red-500">
             <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Maintenance (Mo)</p>
-            <h3 class="text-2xl font-bold text-white">₹<span x-text="formatCurrency(grossRevenueMonthly * (maintPct/100))"></span></h3>
+            <h3 class="text-2xl font-bold text-white">₹<span x-text="formatCurrency({{ sim_maint_monthly }})"></span></h3>
         </div>
         <div class="glass-card rounded-xl p-5 border-l-4 border-blue-400">
             <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Monthly Exported</p>
-            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber(monthlyExported)"></span> kWh</h3>
+            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_monthly_exported }})"></span> kWh</h3>
         </div>
     </div>
 
@@ -78,12 +92,12 @@
     <div class="glass-card rounded-2xl overflow-hidden mb-8 border border-gray-800">
         <div class="p-6 border-b border-gray-800 flex justify-between items-center bg-gray-900/30">
             <div>
-                <h3 class="text-xl font-bold text-emerald-400">Break-Even: <span x-text="breakEvenText"></span></h3>
+                <h3 class="text-xl font-bold text-emerald-400">Break-Even: {{ sim_break_even_text }}</h3>
                 <p class="text-sm text-gray-400 mt-1">Yearly Breakdown of ROI and Profit based on current inputs.</p>
             </div>
             <div class="text-right">
                 <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Projected Yearly Profit</p>
-                <h4 class="text-xl font-bold text-white">₹<span x-text="formatCurrency(netYearlyProfit)"></span></h4>
+                <h4 class="text-xl font-bold text-white">₹<span x-text="formatCurrency({{ sim_net_yearly }})"></span></h4>
             </div>
         </div>
         <div class="overflow-y-auto max-h-80">
@@ -98,33 +112,51 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
-                    <template x-for="p in projections" :key="p.year">
-                        <tr :class="p.isBreakEven ? 'bg-emerald-900/20' : 'hover:bg-gray-800/30'" class="transition-colors">
-                            <td class="px-6 py-4 text-sm text-gray-300 font-medium">Year <span x-text="p.year"></span></td>
-                            <td class="px-6 py-4 text-sm text-emerald-400">₹<span x-text="formatCurrency(p.profit)"></span></td>
-                            <td class="px-6 py-4 text-sm text-blue-400">₹<span x-text="formatCurrency(p.cumulative)"></span></td>
-                            <td class="px-6 py-4 text-sm"><span x-text="formatNumber(p.roi)"></span>%</td>
+                    {% for p in sim_projections %}
+                        <tr class="{% if p.is_break_even %}bg-emerald-900/20{% else %}hover:bg-gray-800/30{% endif %} transition-colors">
+                            <td class="px-6 py-4 text-sm text-gray-300 font-medium">Year {{ p.year }}</td>
+                            <td class="px-6 py-4 text-sm text-emerald-400">₹<span x-text="formatCurrency({{ p.profit }})"></span></td>
+                            <td class="px-6 py-4 text-sm text-blue-400">₹<span x-text="formatCurrency({{ p.cumulative }})"></span></td>
+                            <td class="px-6 py-4 text-sm"><span x-text="formatNumber({{ p.roi }})"></span>%</td>
                             <td class="px-6 py-4 text-sm">
-                                <span x-show="p.isBreakEven" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                {% if p.is_break_even %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                     <i class="fa-solid fa-check mr-1"></i> Cost Recovered
                                 </span>
+                                {% endif %}
                             </td>
                         </tr>
-                    </template>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Dynamic Charts Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div class="glass-card rounded-2xl p-6">
-            <h3 class="text-lg font-medium text-gray-200 mb-4">Cumulative Savings Milestone</h3>
-            <div id="chartInvestmentGrowth" class="w-full h-64"></div>
+    <!-- Historical & Performance Charts (Real Data) -->
+    <div class="mb-8" x-show="apiChartsLoaded" x-transition>
+        <div class="glass-card rounded-2xl p-6 shadow-xl shadow-black/40">
+            <h3 class="text-lg font-bold text-white mb-1">Performance Matrix</h3>
+            <p class="text-xs text-gray-400 mb-4">Monthly Generation vs Net Revenue (Last 6 Months)</p>
+            <div class="relative min-h-[18rem]">
+                <div x-show="!apiChartsLoaded" class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+                </div>
+                <div id="chartPerformance" class="w-full h-72 transition-opacity duration-500" :class="apiChartsLoaded ? 'opacity-100' : 'opacity-0'"></div>
+            </div>
         </div>
-        <div class="glass-card rounded-2xl p-6">
-            <h3 class="text-lg font-medium text-gray-200 mb-4">Financial Breakdown (20y)</h3>
-            <div id="chartFinancialBreakdown" class="w-full h-64 flex justify-center items-center"></div>
+    </div>
+    
+    <!-- Projections and Distribution Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="glass-card rounded-2xl p-6 shadow-xl shadow-black/40">
+            <h3 class="text-lg font-bold text-white mb-1">20-Year Financial Projection</h3>
+            <p class="text-xs text-gray-400 mb-4">Cumulative Savings vs Cost <span class="text-blue-400">(Syncs with Simulator)</span></p>
+            <div id="chartInvestmentGrowth" class="w-full h-72"></div>
+        </div>
+        <div class="glass-card rounded-2xl p-6 shadow-xl shadow-black/40">
+            <h3 class="text-lg font-bold text-white mb-1">Financial Breakdown (20y)</h3>
+            <p class="text-xs text-gray-400 mb-4">Projected Earnings & Costs <span class="text-blue-400">(Syncs with Simulator)</span></p>
+            <div id="chartFinancialBreakdown" class="w-full h-72 flex justify-center items-center"></div>
         </div>
     </div>
 
@@ -135,13 +167,9 @@
 <script>
     function dashboardData() {
         return {
-            projectCost: {{ project_cost|default:500000|floatformat:0 }},
-            expectedMonthlyGen: {{ monthly_generation|default:1000|floatformat:2 }},
-            ownUsage: {{ own_usage|default:200|floatformat:2 }},
-            tariffRate: {{ latest_tariff_rate|default:5.5|floatformat:2 }},
-            maintPct: {{ latest_maintenance_pct|default:5.0|floatformat:2 }},
-            taxPct: {{ latest_tax_pct|default:0|floatformat:2 }},
-            
+            apiChartsLoaded: false,
+            apiData: null,
+            chartPerformance: null,
             chartInvGrowth: null,
             chartFinBreakdown: null,
             
@@ -154,121 +182,124 @@
             },
             
             init() {
-                this.$watch('projectCost', () => this.updateCharts());
-                this.$watch('expectedMonthlyGen', () => this.updateCharts());
-                this.$watch('ownUsage', () => this.updateCharts());
-                this.$watch('tariffRate', () => this.updateCharts());
-                this.$watch('maintPct', () => this.updateCharts());
-                this.$watch('taxPct', () => this.updateCharts());
-                
                 setTimeout(() => {
-                    this.initCharts();
+                    this.initSimulatorCharts();
+                    this.fetchApiCharts();
                 }, 100);
             },
             
-            get monthlyExported() {
-                return Math.max(0, this.expectedMonthlyGen - this.ownUsage);
-            },
-            get grossRevenueMonthly() {
-                return this.monthlyExported * this.tariffRate;
-            },
-            get netYearlyProfit() {
-                const gross = this.grossRevenueMonthly * 12;
-                const maint = gross * (this.maintPct / 100);
-                const tax = gross * (this.taxPct / 100);
-                return gross - maint - tax;
-            },
-            get projections() {
-                let data = [];
-                let cumulative = 0;
-                let profit = this.netYearlyProfit;
-                let breakEvenYear = 0;
-                
-                for(let i=1; i<=20; i++) {
-                    cumulative += profit;
-                    let roi = this.projectCost > 0 ? (profit / this.projectCost) * 100 : 0;
-                    
-                    let isBreakEven = false;
-                    if (breakEvenYear === 0 && cumulative >= this.projectCost && profit > 0) {
-                        isBreakEven = true;
-                        breakEvenYear = i;
+            async fetchApiCharts() {
+                try {
+                    const response = await fetch('/api/charts/');
+                    if (response.ok) {
+                        this.apiData = await response.json();
+                        this.renderApiCharts();
+                        this.apiChartsLoaded = true;
                     }
-                    
-                    data.push({
-                        year: i,
-                        profit: profit,
-                        cumulative: cumulative,
-                        roi: roi,
-                        isBreakEven: isBreakEven
-                    });
+                } catch (error) {
+                    console.error("Error fetching chart data", error);
                 }
-                return data;
-            },
-            get breakEvenText() {
-                let profit = this.netYearlyProfit;
-                if (profit <= 0) return "Never (No Profit)";
-                let years = this.projectCost / profit;
-                let wholeYears = Math.floor(years);
-                let months = Math.ceil((years - wholeYears) * 12);
-                if (months === 12) {
-                    wholeYears += 1;
-                    months = 0;
-                }
-                return `${wholeYears} Years, ${months} Months`;
             },
             
-            initCharts() {
+            renderApiCharts() {
+                if(typeof ApexCharts === 'undefined' || !this.apiData) return;
+                
+                // 1. Dual-Axis Performance Matrix
+                const perfOptions = {
+                    series: [{
+                        name: 'Generation (kWh)',
+                        type: 'column',
+                        data: this.apiData.performance.generation
+                    }, {
+                        name: 'Net Revenue (₹)',
+                        type: 'line',
+                        data: this.apiData.performance.revenue
+                    }],
+                    chart: { 
+                        height: 320, 
+                        type: 'line', 
+                        toolbar: { show: false }, 
+                        foreColor: '#9ca3af', 
+                        animations: { speed: 800 },
+                        dropShadow: { enabled: true, enabledOnSeries: [1], top: 4, left: 0, blur: 5, color: '#34d399', opacity: 0.4 }
+                    },
+                    plotOptions: {
+                        bar: {
+                            borderRadius: 6,
+                            columnWidth: '45%',
+                        }
+                    },
+                    stroke: { width: [0, 4], curve: 'smooth' },
+                    colors: ['#3b82f6', '#34d399'],
+                    fill: { 
+                        type: ['gradient', 'solid'], 
+                        gradient: { 
+                            shade: 'dark',
+                            type: "vertical",
+                            gradientToColors: ['#60a5fa', undefined], 
+                            opacityFrom: 0.85, 
+                            opacityTo: 0.15, 
+                            stops: [0, 100] 
+                        } 
+                    },
+                    xaxis: { 
+                        categories: this.apiData.performance.labels, 
+                        axisBorder: { show: false }, 
+                        axisTicks: { show: false },
+                        labels: { style: { colors: '#d1d5db', fontWeight: 500 } }
+                    },
+                    yaxis: [
+                        { title: { text: 'Generation (kWh)', style: { color: '#9ca3af', fontWeight: 500 } }, labels: { style: { colors: '#9ca3af' } } },
+                        { opposite: true, title: { text: 'Net Revenue (₹)', style: { color: '#34d399', fontWeight: 500 } }, labels: { formatter: (value) => "₹" + this.formatCurrency(value), style: { colors: '#34d399', fontWeight: 500 } } }
+                    ],
+                    grid: { borderColor: 'rgba(255,255,255,0.06)', strokeDashArray: 4, padding: { top: 15, bottom: 10 } },
+                    legend: { position: 'top', horizontalAlign: 'right', labels: { colors: '#f3f4f6' }, markers: { radius: 12 } },
+                    tooltip: { 
+                        theme: 'dark', 
+                        shared: true, 
+                        intersect: false,
+                        y: { formatter: (y, { seriesIndex }) => {
+                            if(typeof y !== "undefined") {
+                                return seriesIndex === 0 ? y.toFixed(1) + " kWh" : "₹" + this.formatCurrency(y);
+                            }
+                            return y;
+                        }}
+                    }
+                };
+                this.chartPerformance = new ApexCharts(document.querySelector("#chartPerformance"), perfOptions);
+                this.chartPerformance.render();
+            },
+            
+            initSimulatorCharts() {
                 if(typeof ApexCharts === 'undefined') return;
                 
+                // 3. Simulator: Investment Growth Area
                 const areaOptions = {
-                    series: [],
-                    chart: { type: 'area', height: '100%', parentHeightOffset: 0, toolbar: { show: false }, foreColor: '#9ca3af', animations: { enabled: true, easing: 'easeinout', speed: 800 } },
+                    series: [{ name: 'Cumulative Savings', data: {{ chart_cumulative_data|safe }} },
+                             { name: 'Investment Cost', data: {{ chart_investment_data|safe }} }],
+                    chart: { type: 'area', height: 280, toolbar: { show: false }, foreColor: '#9ca3af', animations: { enabled: true, easing: 'easeinout', speed: 800 } },
                     colors: ['#8b5cf6', '#ef4444'],
-                    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05 } },
-                    dataLabels: { enabled: false }, stroke: { curve: 'smooth', width: 2 },
+                    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.5, opacityTo: 0.1 } },
+                    dataLabels: { enabled: false }, stroke: { curve: 'smooth', width: [3, 2], dashArray: [0, 5] },
                     xaxis: { categories: ['Year 1', 'Year 5', 'Year 10', 'Year 15', 'Year 20'], axisBorder: { show: false }, axisTicks: { show: false } },
-                    yaxis: { labels: { formatter: (value) => { return "₹" + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value); } } },
+                    yaxis: { labels: { formatter: (value) => "₹" + this.formatCurrency(value) } },
                     grid: { borderColor: 'rgba(255,255,255,0.05)', strokeDashArray: 4 },
-                    legend: { position: 'top', horizontalAlign: 'right' }, tooltip: { theme: 'dark', y: { formatter: (value) => { return "₹" + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value); } } }
+                    legend: { position: 'top', horizontalAlign: 'right' }, tooltip: { theme: 'dark', y: { formatter: (value) => "₹" + this.formatCurrency(value) } }
                 };
                 this.chartInvGrowth = new ApexCharts(document.querySelector("#chartInvestmentGrowth"), areaOptions);
                 this.chartInvGrowth.render();
 
+                // 4. Simulator: Financial Breakdown Donut (Restored)
                 const donutOptions = {
-                    series: [],
+                    series: {{ chart_donut_data|safe }},
                     labels: ['Net Profit', 'Maintenance', 'Tax'],
-                    chart: { type: 'donut', height: '100%', foreColor: '#9ca3af', animations: { speed: 800 } },
+                    chart: { type: 'donut', height: 280, foreColor: '#9ca3af', animations: { speed: 800 } },
                     colors: ['#10b981', '#f59e0b', '#ef4444'],
                     plotOptions: { pie: { donut: { size: '75%', background: 'transparent' } } },
-                    dataLabels: { enabled: false }, stroke: { show: false }, legend: { position: 'bottom' }, tooltip: { theme: 'dark', y: { formatter: (value) => { return "₹" + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value); } } }
+                    dataLabels: { enabled: false }, stroke: { show: false }, legend: { position: 'bottom' }, tooltip: { theme: 'dark', y: { formatter: (value) => { return "₹" + this.formatCurrency(value); } } }
                 };
                 this.chartFinBreakdown = new ApexCharts(document.querySelector("#chartFinancialBreakdown"), donutOptions);
                 this.chartFinBreakdown.render();
-                
-                this.updateCharts();
-            },
-            
-            updateCharts() {
-                if (!this.chartInvGrowth || !this.chartFinBreakdown) return;
-                
-                let p = this.projections;
-                let c_y1 = p.length >= 1 ? p[0].cumulative : 0;
-                let c_y5 = p.length >= 5 ? p[4].cumulative : 0;
-                let c_y10 = p.length >= 10 ? p[9].cumulative : 0;
-                let c_y15 = p.length >= 15 ? p[14].cumulative : 0;
-                let c_y20 = p.length >= 20 ? p[19].cumulative : 0;
-                
-                this.chartInvGrowth.updateSeries([
-                    { name: 'Cumulative Savings', data: [c_y1, c_y5, c_y10, c_y15, c_y20] },
-                    { name: 'Investment Cost', data: [this.projectCost, this.projectCost, this.projectCost, this.projectCost, this.projectCost] }
-                ]);
-                
-                const gross = this.grossRevenueMonthly * 12 * 20; // 20 year gross
-                const maint = gross * (this.maintPct / 100);
-                const tax = gross * (this.taxPct / 100);
-                const net = gross - maint - tax;
-                
-                this.chartFinBreakdown.updateSeries([net, maint, tax]);
             }
         }
     }

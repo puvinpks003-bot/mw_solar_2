@@ -13,6 +13,72 @@ from .services import calculate_solar_investment
 def landing_view(request):
     return render(request, 'solar/landing.html')
 
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode
+from django.conf import settings
+from .models import CustomUser
+
+def password_reset_request_view(request):
+    initial = {}
+    mobile = request.GET.get('mobile')
+    print(' Mobile number from GET parameter:', mobile)
+    if mobile:
+        try:
+            user = CustomUser.objects.get(mobile_number=mobile)
+            initial['email'] = user.email
+            print(' User found for mobile number:', user.email)
+        except CustomUser.DoesNotExist:
+            print(' No user found for mobile number:', mobile)
+            pass
+            
+    if request.method == "POST":
+        form = PasswordResetForm(request.POST)
+        if form.is_valid():
+            form.save(
+                request=request,
+                use_https=request.is_secure(),
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+                email_template_name='registration/password_reset_email.html',
+                subject_template_name='registration/password_reset_subject.txt',
+            )
+            return redirect('password_reset_done')
+    else:
+        form = PasswordResetForm(initial=initial)
+        
+    return render(request, 'registration/password_reset_form.html', {'form': form})
+
+def password_reset_done_view(request):
+    return render(request, 'registration/password_reset_done.html')
+
+def password_reset_confirm_view(request, uidb64, token):
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = CustomUser.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        if request.method == 'POST':
+            form = SetPasswordForm(user, request.POST)
+            if form.is_valid():
+                form.save()
+                return redirect('password_reset_complete')
+        else:
+            form = SetPasswordForm(user)
+        validlink = True
+    else:
+        form = None
+        validlink = False
+        
+    return render(request, 'registration/password_reset_confirm.html', {
+        'form': form,
+        'validlink': validlink,
+    })
+
+def password_reset_complete_view(request):
+    return render(request, 'registration/password_reset_complete.html')
+
 def signup_view(request):
     if request.user.is_authenticated:
         return redirect('dashboard')
@@ -150,6 +216,68 @@ def dashboard_view(request):
                 if p and p.tariff:
                     latest_tariff_rate = float(p.tariff.rate_per_kwh)
 
+        # Simulator Logic
+        import math
+        
+        sim_project_cost = float(request.GET.get('project_cost', context['project_cost'] or 500000))
+        sim_monthly_gen = float(request.GET.get('monthly_gen', monthly_gen or 1000))
+        sim_own_usage = float(request.GET.get('own_usage', own_usage or 200))
+        sim_tariff_rate = float(request.GET.get('tariff_rate', latest_tariff_rate or 5.5))
+        sim_maint_pct = float(request.GET.get('maint_pct', latest_maintenance_pct or 5.0))
+        sim_tax_pct = float(request.GET.get('tax_pct', latest_tax_pct or 0.0))
+
+        sim_monthly_exported = max(0, sim_monthly_gen - sim_own_usage)
+        sim_gross_monthly = sim_monthly_exported * sim_tariff_rate
+        sim_gross_yearly = sim_gross_monthly * 12
+        sim_maint_yearly = sim_gross_yearly * (sim_maint_pct / 100.0)
+        sim_tax_yearly = sim_gross_yearly * (sim_tax_pct / 100.0)
+        sim_net_yearly = sim_gross_yearly - sim_maint_yearly - sim_tax_yearly
+        sim_maint_monthly = sim_maint_yearly / 12
+        
+        sim_projections = []
+        cumulative = 0
+        break_even_year = 0
+        chart_cumulative_data = []
+        chart_investment_data = []
+        
+        for i in range(1, 21):
+            cumulative += sim_net_yearly
+            sim_roi = (sim_net_yearly / sim_project_cost) * 100 if sim_project_cost > 0 else 0
+            
+            is_break_even = False
+            if break_even_year == 0 and cumulative >= sim_project_cost and sim_net_yearly > 0:
+                is_break_even = True
+                break_even_year = i
+                
+            sim_projections.append({
+                'year': i,
+                'profit': sim_net_yearly,
+                'cumulative': cumulative,
+                'roi': sim_roi,
+                'is_break_even': is_break_even
+            })
+            
+            if i in [1, 5, 10, 15, 20]:
+                chart_cumulative_data.append(cumulative)
+                chart_investment_data.append(sim_project_cost)
+
+        if sim_net_yearly <= 0:
+            sim_break_even_text = "Never (No Profit)"
+        else:
+            years = sim_project_cost / sim_net_yearly
+            whole_years = int(years)
+            months = int(math.ceil((years - whole_years) * 12))
+            if months == 12:
+                whole_years += 1
+                months = 0
+            sim_break_even_text = f"{whole_years} Years, {months} Months"
+
+        sim_20y_gross = sim_gross_yearly * 20
+        sim_20y_maint = sim_20y_gross * (sim_maint_pct / 100.0)
+        sim_20y_tax = sim_20y_gross * (sim_tax_pct / 100.0)
+        sim_20y_net = sim_20y_gross - sim_20y_maint - sim_20y_tax
+        chart_donut_data = [sim_20y_net, sim_20y_maint, sim_20y_tax]
+
         context.update({
             'current_project_value': current_value,
             'todays_generation': todays_gen,
@@ -167,7 +295,25 @@ def dashboard_view(request):
             'latest_tariff_rate': latest_tariff_rate,
             'latest_maintenance_pct': latest_maintenance_pct,
             'latest_tax_pct': latest_tax_pct,
-            'notifications': client.notifications.order_by('-date')[:5]
+            'notifications': client.notifications.order_by('-date')[:5],
+            
+            # Simulator Context
+            'sim_project_cost': sim_project_cost,
+            'sim_monthly_gen': sim_monthly_gen,
+            'sim_own_usage': sim_own_usage,
+            'sim_tariff_rate': sim_tariff_rate,
+            'sim_maint_pct': sim_maint_pct,
+            'sim_tax_pct': sim_tax_pct,
+            
+            'sim_monthly_exported': sim_monthly_exported,
+            'sim_maint_monthly': sim_maint_monthly,
+            'sim_net_yearly': sim_net_yearly,
+            'sim_break_even_text': sim_break_even_text,
+            'sim_projections': sim_projections,
+            
+            'chart_cumulative_data': chart_cumulative_data,
+            'chart_investment_data': chart_investment_data,
+            'chart_donut_data': chart_donut_data,
         })
         
     except Client.DoesNotExist:
@@ -179,14 +325,57 @@ def dashboard_view(request):
 def dashboard_charts_api_view(request):
     try:
         client = request.user.client_profile
-        client_inv = sum(p.client_investment for p in client.plants.all())
-        company_inv = sum(p.company_investment for p in client.plants.all())
+        plants = client.plants.all()
+        client_inv = sum(p.client_investment for p in plants)
+        company_inv = sum(p.company_investment for p in plants)
         
+        # Get last 6 months labels and data
+        today = datetime.date.today()
+        month_labels = []
+        gen_data = []
+        rev_data = []
+        carbon_data = []
+        
+        cumulative_carbon = 0
+        
+        for i in range(5, -1, -1):
+            target_month = today.month - i
+            target_year = today.year
+            if target_month <= 0:
+                target_month += 12
+                target_year -= 1
+                
+            month_abbr = datetime.date(target_year, target_month, 1).strftime('%b %Y')
+            month_labels.append(month_abbr)
+            
+            # Daily readings summed for the month
+            readings = MeterReading.objects.filter(
+                plant__in=plants, 
+                reading_date__year=target_year, 
+                reading_date__month=target_month
+            )
+            d_gen = sum(r.daily_generation for r in readings)
+            gen_data.append(float(d_gen))
+            
+            # Payments for the month
+            payments = Payment.objects.filter(
+                plant__in=plants,
+                month__year=target_year,
+                month__month=target_month
+            )
+            m_rev = sum(p.net_earnings for p in payments)
+            rev_data.append(float(m_rev))
+            
+            # Carbon offset: approx 0.85 kg CO2 per kWh
+            cumulative_carbon += float(d_gen) * 0.85
+            carbon_data.append(round(cumulative_carbon, 2))
+
+        # Overall revenue distribution
         gross = 0
         maint = 0
         tax = 0
         net = 0
-        for plant in client.plants.all():
+        for plant in plants:
             for p in plant.payments.all():
                 gross += float(p.gross_revenue)
                 maint += float(p.maintenance_charge)
@@ -194,13 +383,14 @@ def dashboard_charts_api_view(request):
                 net += float(p.net_earnings)
 
         data = {
-            'monthly_gen': {
-                'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                'data': [1200, 1300, 1500, 1800, 1900, 1850]
+            'performance': {
+                'labels': month_labels,
+                'generation': gen_data,
+                'revenue': rev_data
             },
-            'monthly_revenue': {
-                'labels': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-                'data': [5400, 5850, 6750, 8100, 8550, 8325]
+            'environmental': {
+                'labels': month_labels,
+                'carbon_offset': carbon_data
             },
             'investment_dist': {
                 'labels': ['Client Investment', 'Company Investment'],
@@ -209,14 +399,6 @@ def dashboard_charts_api_view(request):
             'revenue_dist': {
                 'labels': ['Net Earnings', 'Maintenance', 'Tax'],
                 'data': [net, maint, tax]
-            },
-            'export_trend': {
-                'labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                'data': [35, 40, 42, 38, 45, 50, 48]
-            },
-            'lifetime_prod': {
-                'labels': ['Month 1', 'Month 2', 'Month 3', 'Month 4', 'Month 5', 'Month 6'],
-                'data': [1200, 2500, 4000, 5800, 7700, 9550]
             }
         }
         return JsonResponse(data)
