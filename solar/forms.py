@@ -5,16 +5,16 @@ import re
 User = get_user_model()
 
 class SignupForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors', 'placeholder': 'Password'}))
-    confirm_password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors', 'placeholder': 'Confirm Password'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors pr-12', 'placeholder': 'Password'}))
+    confirm_password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors pr-12', 'placeholder': 'Confirm Password'}))
 
     class Meta:
         model = User
         fields = ['full_name', 'mobile_number', 'email']
         widgets = {
-            'full_name': forms.TextInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors', 'placeholder': 'Full Name'}),
-            'mobile_number': forms.TextInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors', 'placeholder': 'Mobile Number'}),
-            'email': forms.EmailInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors', 'placeholder': 'Email Address'}),
+            'full_name': forms.TextInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors', 'placeholder': 'Full Name', 'autocomplete': 'name'}),
+            'mobile_number': forms.TextInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors', 'placeholder': 'Mobile Number', 'autocomplete': 'tel'}),
+            'email': forms.EmailInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors', 'placeholder': 'Email Address', 'autocomplete': 'email'}),
         }
 
     def clean_mobile_number(self):
@@ -46,8 +46,8 @@ class SignupForm(forms.ModelForm):
         return cleaned_data
 
 class LoginForm(forms.Form):
-    mobile_number = forms.CharField(widget=forms.TextInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors', 'placeholder': 'Mobile Number'}))
-    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors', 'placeholder': 'Password'}))
+    mobile_number = forms.CharField(widget=forms.TextInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors', 'placeholder': 'Mobile Number', 'autocomplete': 'tel'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-blue-500 transition-colors pr-12', 'placeholder': 'Password', 'autocomplete': 'current-password'}))
 
 
 class CalculatorForm(forms.Form):

@@ -25,7 +25,8 @@ SECRET_KEY = 'django-insecure-62#r0du#zdehin@nbu+gminu(wi_!9h31-e&lomh3vl7ed)d83
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['mw-solar-2-mbof.vercel.app']
+# ALLOWED_HOSTS = ['mw-solar-2-mbof.vercel.app']
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -133,3 +134,20 @@ AUTHENTICATION_BACKENDS = [
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+import os
+
+# Load environment variables from .env file manually to avoid dependency issues
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                os.environ[key.strip()] = value.strip()
+
+# Email Configuration (Demo Mode: saves emails to a local folder)
+EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+EMAIL_FILE_PATH = BASE_DIR / 'emails'
+DEFAULT_FROM_EMAIL = 'MW Solar <no-reply@mwsolar.com>'

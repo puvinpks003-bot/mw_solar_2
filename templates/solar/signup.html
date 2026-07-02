@@ -15,7 +15,7 @@
             </p>
         </div>
         
-        <form class="mt-8 space-y-6" action="{% url 'signup' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" method="POST" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
+        <form class="mt-8 space-y-6" action="{% url 'signup' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" method="POST" x-data="{ isSubmitting: false }" @submit="localStorage.setItem('signup_email', document.getElementById('id_email').value); isSubmitting = true">
             {% csrf_token %}
             
             {% if form.non_field_errors %}
@@ -46,16 +46,26 @@
                         <p class="text-red-400 text-xs mt-1">{{ form.email.errors.0 }}</p>
                     {% endif %}
                 </div>
-                <div>
+                <div x-data="{ showPassword: false }">
                     <label for="{{ form.password.id_for_label }}" class="sr-only">Password</label>
-                    {{ form.password }}
+                    <div class="relative">
+                        {{ form.password }}
+                        <button type="button" @click="showPassword = !showPassword; $el.previousElementSibling.type = showPassword ? 'text' : 'password'" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                            <i class="fa-solid" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
                     {% if form.password.errors %}
                         <p class="text-red-400 text-xs mt-1">{{ form.password.errors.0 }}</p>
                     {% endif %}
                 </div>
-                <div>
+                <div x-data="{ showConfirmPassword: false }">
                     <label for="{{ form.confirm_password.id_for_label }}" class="sr-only">Confirm Password</label>
-                    {{ form.confirm_password }}
+                    <div class="relative">
+                        {{ form.confirm_password }}
+                        <button type="button" @click="showConfirmPassword = !showConfirmPassword; $el.previousElementSibling.type = showConfirmPassword ? 'text' : 'password'" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                            <i class="fa-solid" :class="showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
                     {% if form.confirm_password.errors %}
                         <p class="text-red-400 text-xs mt-1">{{ form.confirm_password.errors.0 }}</p>
                     {% endif %}
