@@ -24,10 +24,10 @@
                 <thead>
                     <tr class="bg-gray-900/50 text-gray-400 text-sm uppercase tracking-wider border-b border-gray-800">
                         <th class="px-6 py-4 font-medium">Date</th>
-                        <th class="px-6 py-4 font-medium">Monthly Bill</th>
-                        <th class="px-6 py-4 font-medium">Investment</th>
-                        <th class="px-6 py-4 font-medium">20y Savings</th>
-                        <th class="px-6 py-4 font-medium">ROI</th>
+                        <th class="px-6 py-4 font-medium">Project Cost</th>
+                        <th class="px-6 py-4 font-medium">Monthly KW</th>
+                        <th class="px-6 py-4 font-medium">Tariff</th>
+                        <th class="px-6 py-4 font-medium">Net Profit (Yr)</th>
                         <th class="px-6 py-4 font-medium text-right">Actions</th>
                     </tr>
                 </thead>
@@ -37,21 +37,21 @@
                         <td class="px-6 py-4 text-sm text-gray-300">
                             {{ calc.created_at|date:"M d, Y" }}
                         </td>
-                        <td class="px-6 py-4 text-sm font-medium text-white">
-                            ₹{{ calc.monthly_bill|floatformat:0 }}
+                        <td class="px-6 py-4 text-sm font-medium text-blue-400">
+                            ₹{{ calc.sim_project_cost|floatformat:0 }}
                         </td>
-                        <td class="px-6 py-4 text-sm text-blue-400">
-                            ₹{{ calc.investment|floatformat:0 }}
+                        <td class="px-6 py-4 text-sm text-white">
+                            {{ calc.sim_monthly_gen|floatformat:2 }} kW
                         </td>
-                        <td class="px-6 py-4 text-sm text-green-400">
-                            ₹{{ calc.twenty_year|floatformat:0 }}
+                        <td class="px-6 py-4 text-sm text-gray-300">
+                            ₹{{ calc.sim_tariff_rate }}/kWh
                         </td>
-                        <td class="px-6 py-4 text-sm text-purple-400">
-                            {{ calc.roi }}%
+                        <td class="px-6 py-4 text-sm text-emerald-400">
+                            ₹{{ calc.sim_net_yearly|floatformat:0 }}
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <a href="{% url 'dashboard' %}?calc_id={{ calc.id }}" class="text-gray-500 hover:text-white transition-colors mr-3" title="View Details">
-                                <i class="fa-solid fa-eye"></i>
+                            <a href="{% url 'dashboard' %}?project_cost={{ calc.sim_project_cost|stringformat:'.0f' }}&monthly_gen={{ calc.sim_monthly_gen|stringformat:'.2f' }}&own_usage={{ calc.sim_own_usage|stringformat:'.2f' }}&tariff_rate={{ calc.sim_tariff_rate|stringformat:'.2f' }}&maint_val={{ calc.sim_maint_val|stringformat:'.2f' }}&tax_pct={{ calc.sim_tax_pct|stringformat:'.2f' }}&view_only=1" class="text-blue-500 hover:text-blue-400 transition-colors mr-3" title="View Dashboard">
+                                <i class="fa-solid fa-eye"></i> View
                             </a>
                             <form action="{% url 'delete_calculation' calc.id %}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this calculation?');">
                                 {% csrf_token %}
