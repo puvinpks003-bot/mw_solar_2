@@ -63,6 +63,15 @@ class SolarCalculation(models.Model):
     net_profit = models.DecimalField(max_digits=12, decimal_places=2)
     future_value = models.DecimalField(max_digits=12, decimal_places=2)
     
+    # Simulator V2 Parameters
+    sim_project_cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    sim_monthly_gen = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    sim_own_usage = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    sim_tariff_rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    sim_maint_val = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    sim_tax_pct = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    sim_net_yearly = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

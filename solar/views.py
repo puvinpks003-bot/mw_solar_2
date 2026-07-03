@@ -6,6 +6,8 @@ from django.http import JsonResponse
 from django.db.models import Sum
 import datetime
 
+from django.shortcuts import get_object_or_404
+
 from .forms import SignupForm, LoginForm, CalculatorForm
 from .models import SolarCalculation, Client, SolarPlant, MeterReading, Payment, Notification, Tariff
 from .services import calculate_solar_investment
@@ -118,11 +120,33 @@ def logout_view(request):
     logout(request)
     return redirect('landing')
 
-from django.shortcuts import get_object_or_404
 
 @login_required(login_url='login')
 def dashboard_view(request):
     context = {}
+    context['project_cost'] = 0
+    context['client_investment'] = 0
+    context['company_investment'] = 0
+    monthly_gen = 0
+    own_usage = 0
+    latest_tariff_rate = 0
+    latest_maintenance_val = 0
+    latest_tax_pct = 0
+    
+    current_value = 0
+    todays_gen = 0
+    monthly_exported_units = 0
+    lifetime_gen = 0
+    exported_units = 0
+    gross_revenue = 0
+    maintenance = 0
+    net_earnings = 0
+    payment_status = "No Payments"
+    yearly_data = []
+    roi = 0
+    plants = []
+    client = None
+    
     calc_id = request.GET.get('calc_id')
     
     if calc_id:
@@ -201,14 +225,14 @@ def dashboard_view(request):
         
         # Baseline variables for interactive projection
         latest_tariff_rate = 0
-        latest_maintenance_pct = 0
+        latest_maintenance_val = 0
         latest_tax_pct = 0
         
         if plants:
             latest_payment = Payment.objects.filter(plant__in=plants).order_by('-payment_date').first()
             if latest_payment:
                 latest_tariff_rate = float(latest_payment.tariff_rate)
-                latest_maintenance_pct = float(latest_payment.maintenance_percentage)
+                latest_maintenance_val = float(latest_payment.maintenance_charge)
                 latest_tax_pct = float(latest_payment.tax_percentage)
             else:
                 # Fallback to tariff from plant
@@ -216,23 +240,57 @@ def dashboard_view(request):
                 if p and p.tariff:
                     latest_tariff_rate = float(p.tariff.rate_per_kwh)
 
+    except Client.DoesNotExist:
+        context['has_client'] = False
+        
+    finally:
         # Simulator Logic
         import math
         
-        sim_project_cost = float(request.GET.get('project_cost', context['project_cost'] or 500000))
-        sim_monthly_gen = float(request.GET.get('monthly_gen', monthly_gen or 1000))
-        sim_own_usage = float(request.GET.get('own_usage', own_usage or 200))
-        sim_tariff_rate = float(request.GET.get('tariff_rate', latest_tariff_rate or 5.5))
-        sim_maint_pct = float(request.GET.get('maint_pct', latest_maintenance_pct or 5.0))
-        sim_tax_pct = float(request.GET.get('tax_pct', latest_tax_pct or 0.0))
+        # Determine defaults from latest_calc if available
+        def_proj_cost = context['project_cost'] or 500000
+        def_monthly_gen = monthly_gen or 1000
+        def_own_usage = own_usage or 200
+        def_tariff = latest_tariff_rate or 2.25
+        def_maint = latest_maintenance_val or 500.0
+        def_tax = latest_tax_pct or 0.0
+
+        if latest_calc:
+            if latest_calc.sim_project_cost is not None:
+                def_proj_cost = latest_calc.sim_project_cost
+                def_monthly_gen = latest_calc.sim_monthly_gen
+                def_own_usage = latest_calc.sim_own_usage
+                def_tariff = latest_calc.sim_tariff_rate
+                def_maint = latest_calc.sim_maint_val
+                def_tax = latest_calc.sim_tax_pct
+            else:
+                # Old calculation record fallback
+                def_proj_cost = latest_calc.investment
+
+        def safe_float(val, default):
+            try:
+                if val is None or str(val).strip() == '':
+                    return float(default) if default is not None else 0.0
+                return float(val)
+            except (ValueError, TypeError):
+                return float(default) if default is not None else 0.0
+
+        sim_project_cost = safe_float(request.GET.get('project_cost'), def_proj_cost)
+        sim_monthly_gen = safe_float(request.GET.get('monthly_gen'), def_monthly_gen)
+        sim_own_usage = safe_float(request.GET.get('own_usage'), def_own_usage)
+        sim_tariff_rate = safe_float(request.GET.get('tariff_rate'), def_tariff)
+        sim_maint_val = safe_float(request.GET.get('maint_val'), def_maint)
+        sim_tax_pct = safe_float(request.GET.get('tax_pct'), def_tax)
 
         sim_monthly_exported = max(0, sim_monthly_gen - sim_own_usage)
         sim_gross_monthly = sim_monthly_exported * sim_tariff_rate
+        sim_maint_monthly = sim_maint_val
+        sim_net_monthly = sim_gross_monthly - sim_maint_monthly
+        
         sim_gross_yearly = sim_gross_monthly * 12
-        sim_maint_yearly = sim_gross_yearly * (sim_maint_pct / 100.0)
+        sim_maint_yearly = sim_maint_monthly * 12
         sim_tax_yearly = sim_gross_yearly * (sim_tax_pct / 100.0)
-        sim_net_yearly = sim_gross_yearly - sim_maint_yearly - sim_tax_yearly
-        sim_maint_monthly = sim_maint_yearly / 12
+        sim_net_yearly = sim_net_monthly * 12
         
         sim_projections = []
         cumulative = 0
@@ -273,10 +331,65 @@ def dashboard_view(request):
             sim_break_even_text = f"{whole_years} Years, {months} Months"
 
         sim_20y_gross = sim_gross_yearly * 20
-        sim_20y_maint = sim_20y_gross * (sim_maint_pct / 100.0)
-        sim_20y_tax = sim_20y_gross * (sim_tax_pct / 100.0)
-        sim_20y_net = sim_20y_gross - sim_20y_maint - sim_20y_tax
+        sim_20y_maint = sim_maint_yearly * 20
+        sim_20y_tax = 0
+        sim_20y_net = sim_net_yearly * 20
         chart_donut_data = [sim_20y_net, sim_20y_maint, sim_20y_tax]
+
+        # History Tracking
+        is_simulation_update = 'project_cost' in request.GET
+        is_view_only = request.GET.get('view_only') == '1'
+        
+        if is_simulation_update and not is_view_only:
+            last_sim = SolarCalculation.objects.filter(user=request.user, sim_project_cost__isnull=False).order_by('-created_at').first()
+            
+            should_save = False
+            if not last_sim:
+                should_save = True
+            else:
+                try:
+                    if float(last_sim.sim_project_cost) != float(sim_project_cost) or \
+                       float(last_sim.sim_monthly_gen) != float(sim_monthly_gen) or \
+                       float(last_sim.sim_tariff_rate) != float(sim_tariff_rate) or \
+                       float(last_sim.sim_maint_val) != float(sim_maint_val) or \
+                       float(last_sim.sim_tax_pct) != float(sim_tax_pct) or \
+                       float(last_sim.sim_own_usage) != float(sim_own_usage):
+                        should_save = True
+                except (ValueError, TypeError):
+                    should_save = True
+
+            if should_save:
+                try:
+                    SolarCalculation.objects.create(
+                    user=request.user,
+                    monthly_bill=0,
+                    investment=sim_project_cost,
+                    annual_savings=sim_net_yearly,
+                    three_year=sim_net_yearly * 3,
+                    five_year=sim_net_yearly * 5,
+                    ten_year=sim_net_yearly * 10,
+                    fifteen_year=sim_net_yearly * 15,
+                    twenty_year=sim_net_yearly * 20,
+                    roi=max(-999.99, min(sim_roi, 999.99)),
+                    break_even=break_even_year,
+                    maintenance_cost=sim_maint_yearly,
+                    carbon_saved=0,
+                    trees_saved=0,
+                    net_profit=sim_net_yearly,
+                    future_value=0,
+                    sim_project_cost=sim_project_cost,
+                    sim_monthly_gen=sim_monthly_gen,
+                    sim_own_usage=sim_own_usage,
+                    sim_tariff_rate=max(-999.99, min(sim_tariff_rate, 999.99)),
+                    sim_maint_val=sim_maint_val,
+                    sim_tax_pct=max(-999.99, min(sim_tax_pct, 999.99)),
+                    sim_net_yearly=sim_net_yearly
+                )
+                except Exception as e:
+                    print(f"Error saving calculation: {e}")
+
+        # Fetch History for Table
+        simulation_history = SolarCalculation.objects.filter(user=request.user, sim_project_cost__isnull=False).order_by('-created_at')[:5]
 
         context.update({
             'current_project_value': current_value,
@@ -293,31 +406,33 @@ def dashboard_view(request):
             'payment_status': payment_status,
             'yearly_data': yearly_data,
             'latest_tariff_rate': latest_tariff_rate,
-            'latest_maintenance_pct': latest_maintenance_pct,
+            'latest_maintenance_val': latest_maintenance_val,
             'latest_tax_pct': latest_tax_pct,
-            'notifications': client.notifications.order_by('-date')[:5],
+            'notifications': client.notifications.order_by('-date')[:5] if client else [],
             
             # Simulator Context
             'sim_project_cost': sim_project_cost,
             'sim_monthly_gen': sim_monthly_gen,
             'sim_own_usage': sim_own_usage,
             'sim_tariff_rate': sim_tariff_rate,
-            'sim_maint_pct': sim_maint_pct,
+            'sim_maint_val': sim_maint_val,
             'sim_tax_pct': sim_tax_pct,
             
             'sim_monthly_exported': sim_monthly_exported,
+            'sim_gross_monthly': sim_gross_monthly,
             'sim_maint_monthly': sim_maint_monthly,
+            'sim_net_monthly': sim_net_yearly / 12,
             'sim_net_yearly': sim_net_yearly,
             'sim_break_even_text': sim_break_even_text,
             'sim_projections': sim_projections,
+            'simulation_history': simulation_history,
             
             'chart_cumulative_data': chart_cumulative_data,
             'chart_investment_data': chart_investment_data,
             'chart_donut_data': chart_donut_data,
         })
         
-    except Client.DoesNotExist:
-        context['has_client'] = False
+
 
     return render(request, 'solar/dashboard.html', context)
 
@@ -423,7 +538,7 @@ def calculator_view(request):
 
 @login_required(login_url='login')
 def history_view(request):
-    calculations = SolarCalculation.objects.filter(user=request.user).order_by('-created_at')
+    calculations = SolarCalculation.objects.filter(user=request.user, sim_project_cost__isnull=False).order_by('-created_at')
     return render(request, 'solar/history.html', {'calculations': calculations})
 
 @login_required(login_url='login')

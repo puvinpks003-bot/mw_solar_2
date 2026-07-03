@@ -3,7 +3,7 @@
 {% block title %}Dashboard | MW Solar{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="dashboardData()">
+<div id="dashboard-wrapper" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="dashboardData({{ chart_cumulative_data|safe|default:'[]' }}, {{ chart_investment_data|safe|default:'[]' }}, {{ chart_donut_data|safe|default:'[]' }})">
     
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4" data-aos="fade-down">
         <div>
@@ -24,34 +24,65 @@
             </div>
         </div>
         <div x-show="isParamsOpen" x-transition class="p-6">
-            <form method="GET" action="{% url 'dashboard' %}">
+            <form id="sim-form" method="GET" action="{% url 'dashboard' %}"
+                  hx-get="{% url 'dashboard' %}" 
+                  hx-trigger="submit" 
+                  hx-target="#dashboard-wrapper" 
+                  hx-select="#dashboard-wrapper" 
+                  hx-swap="outerHTML"
+                  hx-push-url="true">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                    <!-- Inputs -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Project Cost (₹)</label>
-                        <input type="number" name="project_cost" value="{{ sim_project_cost|stringformat:'.0f' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Total Project Cost (₹)</label>
+                        <input type="number" step="any" id="param_project_cost" name="project_cost" value="{{ sim_project_cost|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Monthly Import kWh</label>
+                        <input type="number" step="any" id="param_monthly_gen" name="monthly_gen" value="{{ sim_monthly_gen|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Expected Monthly Gen (kWh)</label>
-                        <input type="number" name="monthly_gen" value="{{ sim_monthly_gen|stringformat:'.2f' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Site Usage kWh</label>
+                        <input type="number" step="any" id="param_own_usage" name="own_usage" value="{{ sim_own_usage|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Export kWh</label>
+                        <input type="text" readonly :value="formatNumber({{ sim_monthly_exported|default:0 }}, 2)" class="block w-full bg-gray-800 border border-gray-700 rounded-xl py-2 px-3 text-gray-400 cursor-not-allowed" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Own Usage (kWh/mo)</label>
-                        <input type="number" name="own_usage" value="{{ sim_own_usage|stringformat:'.2f' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Tariff Rate (₹)</label>
+                        <input type="number" step="any" id="param_tariff_rate" name="tariff_rate" value="{{ sim_tariff_rate|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                    </div>
+
+                    
+
+                    
+                    
+                    <!-- Calculated Displays (Read-Only) -->
+                     <div>
+                            <!-- <label class="block text-sm font-medium text-gray-400 mb-2">Maintenance Cost (₹)</label>
+                            <input type="number" step="any" id="param_maint_val" name="maint_val" value="{{ sim_maint_val|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" /> -->
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Export kWh Value (₹)</label>
+                        <input type="text" readonly :value="formatCurrency({{ sim_gross_monthly|default:0 }})" class="block w-full bg-gray-800 border border-gray-700 rounded-xl py-2 px-3 text-gray-400 cursor-not-allowed" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Tariff Rate (₹/kWh)</label>
-                        <input type="number" step="0.1" name="tariff_rate" value="{{ sim_tariff_rate|stringformat:'.2f' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Maintenance Cost (₹)</label>
+                        <input type="number" step="any" id="param_maint_val" name="maint_val" value="{{ sim_maint_val|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Maintenance Expense (%)</label>
-                        <input type="number" step="0.1" name="maint_pct" value="{{ sim_maint_pct|stringformat:'.2f' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                        <label class="block text-sm font-medium text-emerald-400 mb-2">Profit (₹)</label>
+                        <input type="text" readonly :value="formatCurrency({{ sim_net_monthly|default:0 }})" class="block w-full bg-gray-800 border border-emerald-900/50 rounded-xl py-2 px-3 text-emerald-400 font-bold cursor-not-allowed" />
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Tax (%)</label>
-                        <input type="number" step="0.1" name="tax_pct" value="{{ sim_tax_pct|stringformat:'.2f' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
-                    </div>
+            
+                    <!-- Hidden fields to preserve other required defaults -->
+                    <input type="hidden" name="tax_pct" value="{{ sim_tax_pct|floatformat:'-2' }}">
                 </div>
-                <div class="flex justify-end">
+                <div class="flex justify-end mt-4">
                     <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded-xl transition-colors shadow-lg shadow-blue-500/30">
                         <i class="fa-solid fa-rotate mr-2"></i> Update Simulation
                     </button>
@@ -60,31 +91,38 @@
         </div>
     </div>
 
-    <!-- 6 KPI Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <div class="glass-card rounded-xl p-5 border-l-4 border-blue-500">
-            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Project Cost</p>
-            <h3 class="text-2xl font-bold text-white">₹<span x-text="formatCurrency({{ sim_project_cost }})"></span></h3>
-        </div>
+    <!-- 7 KPI Cards for Simulator Results -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
         <div class="glass-card rounded-xl p-5 border-l-4 border-yellow-500">
-            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Today's Gen (Est.)</p>
-            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_monthly_gen }} / 30)"></span> kWh</h3>
-        </div>
-        <div class="glass-card rounded-xl p-5 border-l-4 border-yellow-500">
-            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Monthly Gen</p>
-            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_monthly_gen }})"></span> kWh</h3>
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Monthly Import kWh</p>
+            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_monthly_gen }})"></span></h3>
         </div>
         <div class="glass-card rounded-xl p-5 border-l-4 border-emerald-500">
-            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Own Usage</p>
-            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_own_usage }})"></span> kWh</h3>
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Site Usage kWh</p>
+            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_own_usage }})"></span></h3>
+        </div>
+        
+        <div class="glass-card rounded-xl p-5 border-l-4 border-purple-500">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Tariff Rate (₹)</p>
+            <h3 class="text-2xl font-bold text-white">₹<span x-text="formatNumber({{ sim_tariff_rate }})"></span></h3>
+        </div>
+
+        <div class="glass-card rounded-xl p-5 border-l-4 border-blue-400">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Export kWh</p>
+            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_monthly_exported }})"></span></h3>
+        </div>
+        
+        <div class="glass-card rounded-xl p-5 border-l-4 border-indigo-500">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Export kWh Value (₹)</p>
+            <h3 class="text-2xl font-bold text-white">₹<span x-text="formatCurrency({{ sim_gross_monthly }})"></span></h3>
         </div>
         <div class="glass-card rounded-xl p-5 border-l-4 border-red-500">
-            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Maintenance (Mo)</p>
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Maintenance Cost (₹)</p>
             <h3 class="text-2xl font-bold text-white">₹<span x-text="formatCurrency({{ sim_maint_monthly }})"></span></h3>
         </div>
-        <div class="glass-card rounded-xl p-5 border-l-4 border-blue-400">
-            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Monthly Exported</p>
-            <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_monthly_exported }})"></span> kWh</h3>
+        <div class="glass-card rounded-xl p-5 border-l-4 border-emerald-400">
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Profit</p>
+            <h3 class="text-2xl font-bold text-white">₹<span x-text="formatCurrency({{ sim_net_monthly }})"></span></h3>
         </div>
     </div>
 
@@ -121,7 +159,7 @@
                             <td class="px-6 py-4 text-sm">
                                 {% if p.is_break_even %}
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                    <i class="fa-solid fa-check mr-1"></i> Cost Recovered
+                                    <i class="fa-solid fa-check mr-1"></i> Investment Recovered
                                 </span>
                                 {% endif %}
                             </td>
@@ -146,6 +184,52 @@
         </div>
     </div>
     
+    <!-- Simulation History Table -->
+    {% if simulation_history %}
+    <div class="glass-card rounded-2xl overflow-hidden mb-8 border border-gray-800">
+        <div class="p-6 border-b border-gray-800 flex justify-between items-center bg-gray-900/30">
+            <div>
+                <h3 class="text-xl font-bold text-blue-400"><i class="fa-solid fa-clock-rotate-left mr-2"></i> Simulation History</h3>
+                <p class="text-sm text-gray-400 mt-1">Your recent calculations. Click View to restore past parameters.</p>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead class="bg-gray-900">
+                    <tr class="text-gray-400 text-xs uppercase tracking-wider border-b border-gray-800">
+                        <th class="px-6 py-4 font-medium">Date</th>
+                        <th class="px-6 py-4 font-medium">Total Project Cost</th>
+                        <th class="px-6 py-4 font-medium">Tariff</th>
+                        <th class="px-6 py-4 font-medium">Net Profit (Yr)</th>
+                        <th class="px-6 py-4 font-medium text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for h in simulation_history %}
+                        <tr class="hover:bg-gray-800/30 transition-colors">
+                            <td class="px-6 py-4 text-sm text-gray-300">{{ h.created_at|date:"M d, Y h:i A" }}</td>
+                            <td class="px-6 py-4 text-sm text-blue-400">₹<span x-text="formatCurrency({{ h.sim_project_cost }})"></span></td>
+                            <td class="px-6 py-4 text-sm text-gray-300">₹{{ h.sim_tariff_rate }}/kWh</td>
+                            <td class="px-6 py-4 text-sm text-emerald-400">₹<span x-text="formatCurrency({{ h.sim_net_yearly }})"></span></td>
+                            <td class="px-6 py-4 text-sm text-right">
+                                <a href="{% url 'dashboard' %}?project_cost={{ h.sim_project_cost|stringformat:'.0f' }}&monthly_gen={{ h.sim_monthly_gen|stringformat:'.2f' }}&own_usage={{ h.sim_own_usage|stringformat:'.2f' }}&tariff_rate={{ h.sim_tariff_rate|stringformat:'.2f' }}&maint_val={{ h.sim_maint_val|stringformat:'.2f' }}&tax_pct={{ h.sim_tax_pct|stringformat:'.2f' }}&view_only=1" 
+                                   class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+                                   hx-get="{% url 'dashboard' %}?project_cost={{ h.sim_project_cost|stringformat:'.0f' }}&monthly_gen={{ h.sim_monthly_gen|stringformat:'.2f' }}&own_usage={{ h.sim_own_usage|stringformat:'.2f' }}&tariff_rate={{ h.sim_tariff_rate|stringformat:'.2f' }}&maint_val={{ h.sim_maint_val|stringformat:'.2f' }}&tax_pct={{ h.sim_tax_pct|stringformat:'.2f' }}&view_only=1"
+                                   hx-target="#dashboard-wrapper"
+                                   hx-select="#dashboard-wrapper"
+                                   hx-swap="outerHTML"
+                                   hx-push-url="true">
+                                    <i class="fa-solid fa-eye mr-1"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Projections and Distribution Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div class="glass-card rounded-2xl p-6 shadow-xl shadow-black/40">
@@ -165,7 +249,7 @@
 
 {% block extra_scripts %}
 <script>
-    function dashboardData() {
+    function dashboardData(cumulativeData, investmentData, donutData) {
         return {
             apiChartsLoaded: false,
             apiData: null,
@@ -174,10 +258,12 @@
             chartFinBreakdown: null,
             
             formatCurrency(value) {
+                if (value === null || value === undefined || value === '' || isNaN(value)) return '-';
                 return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value);
             },
             
             formatNumber(value, digits=1) {
+                if (value === null || value === undefined || value === '' || isNaN(value)) return '-';
                 return new Intl.NumberFormat('en-IN', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
             },
             
@@ -275,8 +361,8 @@
                 
                 // 3. Simulator: Investment Growth Area
                 const areaOptions = {
-                    series: [{ name: 'Cumulative Savings', data: {{ chart_cumulative_data|safe }} },
-                             { name: 'Investment Cost', data: {{ chart_investment_data|safe }} }],
+                    series: [{ name: 'Cumulative Savings', data: cumulativeData },
+                             { name: 'Investment Cost', data: investmentData }],
                     chart: { type: 'area', height: 280, toolbar: { show: false }, foreColor: '#9ca3af', animations: { enabled: true, easing: 'easeinout', speed: 800 } },
                     colors: ['#8b5cf6', '#ef4444'],
                     fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.5, opacityTo: 0.1 } },
@@ -291,7 +377,7 @@
 
                 // 4. Simulator: Financial Breakdown Donut (Restored)
                 const donutOptions = {
-                    series: {{ chart_donut_data|safe }},
+                    series: donutData,
                     labels: ['Net Profit', 'Maintenance', 'Tax'],
                     chart: { type: 'donut', height: 280, foreColor: '#9ca3af', animations: { speed: 800 } },
                     colors: ['#10b981', '#f59e0b', '#ef4444'],
