@@ -3,7 +3,7 @@
 {% block title %}Dashboard | MW Solar{% endblock %}
 
 {% block content %}
-<div id="dashboard-wrapper" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="dashboardData({{ chart_cumulative_data|safe|default:'[]' }}, {{ chart_investment_data|safe|default:'[]' }}, {{ chart_donut_data|safe|default:'[]' }})">
+<div id="dashboard-wrapper" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data='dashboardData({{ chart_cumulative_data|safe|default:"[]" }}, {{ chart_investment_data|safe|default:"[]" }}, {{ chart_donut_data|safe|default:"[]" }})'>
     
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4" data-aos="fade-down">
         <div>
@@ -43,7 +43,7 @@
                         <input type="number" step="any" id="param_monthly_gen" name="monthly_gen" value="{{ sim_monthly_gen|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Site Usage kWh</label>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Consumption kWh</label>
                         <input type="number" step="any" id="param_own_usage" name="own_usage" value="{{ sim_own_usage|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
                     </div>
 
@@ -98,7 +98,7 @@
             <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_monthly_gen }})"></span></h3>
         </div>
         <div class="glass-card rounded-xl p-5 border-l-4 border-emerald-500">
-            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Site Usage kWh</p>
+            <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Consumption kWh</p>
             <h3 class="text-2xl font-bold text-white"><span x-text="formatNumber({{ sim_own_usage }})"></span></h3>
         </div>
         
@@ -132,8 +132,15 @@
             <div>
                 <h3 class="text-xl font-bold text-emerald-400">Break-Even: {{ sim_break_even_text }}</h3>
                 <p class="text-sm text-gray-400 mt-1">Yearly Breakdown of ROI and Profit based on current inputs.</p>
+                
+                <div class="mt-4 flex items-center gap-3" x-data="{ years: {{ projection_years|default:20 }} }">
+                    <label class="text-sm text-gray-300 font-medium">Projection Years:</label>
+                    <input type="number" x-model="years" min="{{ min_projection_years }}" class="bg-gray-800 text-white rounded-lg px-3 py-1.5 w-24 text-sm border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all">
+                    <button @click="document.getElementById('sim-form').insertAdjacentHTML('beforeend', `<input type=\'hidden\' name=\'projection_years\' value=\'${years}\'>`); document.getElementById('sim-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 text-xs px-4 py-1.5 rounded-lg transition-colors font-medium">Update</button>
+                    <span class="text-xs text-gray-500 ml-2" x-show="years < {{ min_projection_years }}">Minimum: {{ min_projection_years }} (Investment Recovered)</span>
+                </div>
             </div>
-            <div class="text-right">
+            <div class="text-right hidden md:block">
                 <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Projected Yearly Profit</p>
                 <h4 class="text-xl font-bold text-white">₹<span x-text="formatCurrency({{ sim_net_yearly }})"></span></h4>
             </div>
@@ -146,22 +153,59 @@
                         <th class="px-6 py-4 font-medium">Yearly Profit</th>
                         <th class="px-6 py-4 font-medium">Cumulative Profit</th>
                         <th class="px-6 py-4 font-medium">ROI</th>
+                        <th class="px-6 py-4 font-medium">Remaining %</th>
                         <th class="px-6 py-4 font-medium">Status</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-800">
+                <tbody x-data="{ expandedYear: null }" class="divide-y divide-gray-800">
                     {% for p in sim_projections %}
-                        <tr class="{% if p.is_break_even %}bg-emerald-900/20{% else %}hover:bg-gray-800/30{% endif %} transition-colors">
-                            <td class="px-6 py-4 text-sm text-gray-300 font-medium">Year {{ p.year }}</td>
+                        <tr @click="expandedYear = expandedYear === {{ p.actual_year }} ? null : {{ p.actual_year }}" 
+                            class="cursor-pointer {% if p.is_break_even %}bg-emerald-900/20{% else %}hover:bg-gray-800/30{% endif %} transition-colors">
+                            <td class="px-6 py-4 text-sm text-gray-300 font-medium">
+                                <div class="flex flex-col">
+                                    <div>
+                                        <i class="fa-solid fa-chevron-right text-xs mr-2 transition-transform duration-200" :class="{'rotate-90 text-blue-400': expandedYear === {{ p.actual_year }} }"></i>
+                                        {{ p.actual_year }}
+                                    </div>
+                                    {% if p.is_break_even and p.break_even_month %}
+                                    <div class="text-[11px] text-emerald-400 font-bold mt-1 ml-5">
+                                        in {{ p.break_even_month }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
                             <td class="px-6 py-4 text-sm text-emerald-400">₹<span x-text="formatCurrency({{ p.profit }})"></span></td>
                             <td class="px-6 py-4 text-sm text-blue-400">₹<span x-text="formatCurrency({{ p.cumulative }})"></span></td>
                             <td class="px-6 py-4 text-sm"><span x-text="formatNumber({{ p.roi }})"></span>%</td>
+                            <td class="px-6 py-4 text-sm text-yellow-400"><span x-text="formatNumber({{ p.remaining_pct }})"></span>%</td>
                             <td class="px-6 py-4 text-sm">
                                 {% if p.is_break_even %}
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                     <i class="fa-solid fa-check mr-1"></i> Investment Recovered
                                 </span>
                                 {% endif %}
+                            </td>
+                        </tr>
+                        <!-- Expanded Months Row -->
+                        <tr x-show="expandedYear === {{ p.actual_year }}" x-transition.opacity style="display: none;" class="bg-gray-900/60 border-b border-gray-800">
+                            <td colspan="6" class="px-6 py-4">
+                                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                                    {% for m in p.months %}
+                                        <div class="rounded-lg p-3 border shadow-inner transition-colors duration-300 {% if p.is_break_even and p.break_even_month == m.name %}bg-emerald-900/30 border-emerald-500/40{% else %}bg-gray-800 border-gray-700/50{% endif %}">
+                                            <div class="text-xs font-bold mb-1 flex justify-between {% if p.is_break_even and p.break_even_month == m.name %}text-emerald-400{% else %}text-gray-400{% endif %}">
+                                                {{ m.name }}
+                                                {% if p.is_break_even and p.break_even_month == m.name %}
+                                                    <i class="fa-solid fa-flag-checkered text-[10px]" title="Break-Even Reached"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-sm font-semibold text-emerald-400 mb-1">₹<span x-text="formatCurrency({{ m.profit }})"></span></div>
+                                            <div class="flex justify-between items-center text-xs">
+                                                <span class="text-gray-500">Rem:</span>
+                                                <span class="text-yellow-400 font-medium"><span x-text="formatNumber({{ m.remaining_pct }})"></span>%</span>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
                             </td>
                         </tr>
                     {% endfor %}
@@ -233,12 +277,13 @@
     <!-- Projections and Distribution Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div class="glass-card rounded-2xl p-6 shadow-xl shadow-black/40">
-            <h3 class="text-lg font-bold text-white mb-1">20-Year Financial Projection</h3>
+            <h3 class="text-lg font-bold text-white mb-1">{{ projection_years }}-Year Financial Projection</h3>
             <p class="text-xs text-gray-400 mb-4">Cumulative Savings vs Cost <span class="text-blue-400">(Syncs with Simulator)</span></p>
             <div id="chartInvestmentGrowth" class="w-full h-72"></div>
         </div>
+        
         <div class="glass-card rounded-2xl p-6 shadow-xl shadow-black/40">
-            <h3 class="text-lg font-bold text-white mb-1">Financial Breakdown (20y)</h3>
+            <h3 class="text-lg font-bold text-white mb-1">Financial Breakdown ({{ projection_years }}y)</h3>
             <p class="text-xs text-gray-400 mb-4">Projected Earnings & Costs <span class="text-blue-400">(Syncs with Simulator)</span></p>
             <div id="chartFinancialBreakdown" class="w-full h-72 flex justify-center items-center"></div>
         </div>
@@ -363,15 +408,62 @@
                 const areaOptions = {
                     series: [{ name: 'Cumulative Savings', data: cumulativeData },
                              { name: 'Investment Cost', data: investmentData }],
-                    chart: { type: 'area', height: 280, toolbar: { show: false }, foreColor: '#9ca3af', animations: { enabled: true, easing: 'easeinout', speed: 800 } },
-                    colors: ['#8b5cf6', '#ef4444'],
-                    fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.5, opacityTo: 0.1 } },
-                    dataLabels: { enabled: false }, stroke: { curve: 'smooth', width: [3, 2], dashArray: [0, 5] },
-                    xaxis: { categories: ['Year 1', 'Year 5', 'Year 10', 'Year 15', 'Year 20'], axisBorder: { show: false }, axisTicks: { show: false } },
+                    chart: { 
+                        type: 'area', 
+                        height: 280, 
+                        toolbar: { show: false }, 
+                        foreColor: '#9ca3af', 
+                        animations: { enabled: true, easing: 'easeinout', speed: 800 }
+                    },
+                    colors: ['#10b981', '#64748b'],
+                    fill: { 
+                        type: 'gradient', 
+                        gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 100] } 
+                    },
+                    dataLabels: { enabled: false }, 
+                    stroke: { curve: 'straight', width: [3, 2], dashArray: [0, 5] },
+                    xaxis: { 
+                        type: 'datetime',
+                        min: cumulativeData.length > 0 ? cumulativeData[0][0] : undefined,
+                        max: cumulativeData.length > 0 ? cumulativeData[cumulativeData.length - 1][0] : undefined,
+                        axisBorder: { show: false }, 
+                        axisTicks: { show: false }, 
+                        labels: { style: { colors: '#9ca3af' } } 
+                    },
                     yaxis: { labels: { formatter: (value) => "₹" + this.formatCurrency(value) } },
                     grid: { borderColor: 'rgba(255,255,255,0.05)', strokeDashArray: 4 },
-                    legend: { position: 'top', horizontalAlign: 'right' }, tooltip: { theme: 'dark', y: { formatter: (value) => "₹" + this.formatCurrency(value) } }
+                    legend: { position: 'top', horizontalAlign: 'right' }, 
+                    tooltip: { 
+                        theme: 'dark', 
+                        x: { format: 'MMM yyyy' },
+                        y: { formatter: (value) => "₹" + this.formatCurrency(value) } 
+                    }
                 };
+                
+                if (cumulativeData.length > 0 && investmentData.length > 0) {
+                    let invCost = investmentData[0][1];
+                    let breakEvenIndex = cumulativeData.findIndex(point => point[1] >= invCost);
+                    if (breakEvenIndex !== -1) {
+                        let bePoint = cumulativeData[breakEvenIndex];
+                        let dateStr = new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric' }).format(new Date(bePoint[0]));
+                        let valStr = this.formatCurrency(bePoint[1]);
+                        
+                        areaOptions.annotations = {
+                            points: [{
+                                x: bePoint[0],
+                                y: bePoint[1],
+                                marker: { size: 6, fillColor: "#10b981", strokeColor: "#1e293b", strokeWidth: 3 },
+                                label: {
+                                    borderColor: '#10b981',
+                                    offsetY: -10,
+                                    style: { color: '#fff', background: '#10b981', fontSize: '11px', fontWeight: 'bold' },
+                                    text: `Break-Even: ${dateStr} (₹${valStr})`
+                                }
+                            }]
+                        };
+                    }
+                }
+                
                 this.chartInvGrowth = new ApexCharts(document.querySelector("#chartInvestmentGrowth"), areaOptions);
                 this.chartInvGrowth.render();
 

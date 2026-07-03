@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Sum
 import datetime
+import json
 
 from django.shortcuts import get_object_or_404
 
@@ -298,43 +299,95 @@ def dashboard_view(request):
         chart_cumulative_data = []
         chart_investment_data = []
         
-        for i in range(1, 21):
+        current_year = datetime.date.today().year
+        monthly_cumulative = 0
+        if sim_net_yearly > 0:
+            import math
+            min_projection_years = int(math.ceil(sim_project_cost / sim_net_yearly))
+        else:
+            min_projection_years = 1
+            
+        try:
+            projection_years = int(request.GET.get('projection_years', 20))
+        except ValueError:
+            projection_years = 20
+            
+        projection_years = max(projection_years, min_projection_years)
+        
+        import time
+        current_date = datetime.date.today()
+        # Strictly align chart timeline with the table's calendar year (Jan 1st)
+        chart_date = datetime.date(current_date.year, 1, 1)
+        
+        for i in range(1, projection_years + 1):
+            actual_year = current_year + i - 1
             cumulative += sim_net_yearly
-            sim_roi = (sim_net_yearly / sim_project_cost) * 100 if sim_project_cost > 0 else 0
+            sim_roi = (cumulative / sim_project_cost) * 100 if sim_project_cost > 0 else 0
+            
+            sim_recovered_pct = (cumulative / sim_project_cost) * 100 if sim_project_cost > 0 else 0
+            sim_remaining_pct = max(0, 100 - sim_recovered_pct)
             
             is_break_even = False
+            break_even_month_name = None
             if break_even_year == 0 and cumulative >= sim_project_cost and sim_net_yearly > 0:
                 is_break_even = True
                 break_even_year = i
+            
+            months_data = []
+            m_recovered = (cumulative - sim_net_yearly) / sim_project_cost * 100 if sim_project_cost > 0 else 0
+            month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+            for m in month_names:
+                monthly_cumulative += sim_net_monthly
+                m_recovered += (sim_net_monthly / sim_project_cost) * 100 if sim_project_cost > 0 else 0
+                
+                if is_break_even and break_even_month_name is None and monthly_cumulative >= sim_project_cost:
+                    break_even_month_name = m
+                    
+                timestamp_ms = int(time.mktime(chart_date.timetuple())) * 1000
+                chart_cumulative_data.append([timestamp_ms, monthly_cumulative])
+                chart_investment_data.append([timestamp_ms, sim_project_cost])
+                
+                # Advance chart_date by 1 month
+                if chart_date.month == 12:
+                    chart_date = datetime.date(chart_date.year + 1, 1, 1)
+                else:
+                    chart_date = datetime.date(chart_date.year, chart_date.month + 1, 1)
+                    
+                months_data.append({
+                    'name': m,
+                    'profit': sim_net_monthly,
+                    'cumulative': monthly_cumulative,
+                    'remaining_pct': max(0, 100 - m_recovered)
+                })
                 
             sim_projections.append({
                 'year': i,
+                'actual_year': actual_year,
                 'profit': sim_net_yearly,
                 'cumulative': cumulative,
                 'roi': sim_roi,
-                'is_break_even': is_break_even
+                'remaining_pct': sim_remaining_pct,
+                'is_break_even': is_break_even,
+                'break_even_month': break_even_month_name,
+                'months': months_data
             })
-            
-            if i in [1, 5, 10, 15, 20]:
-                chart_cumulative_data.append(cumulative)
-                chart_investment_data.append(sim_project_cost)
 
         if sim_net_yearly <= 0:
             sim_break_even_text = "Never (No Profit)"
         else:
             years = sim_project_cost / sim_net_yearly
             whole_years = int(years)
-            months = int(math.ceil((years - whole_years) * 12))
+            months = int(round((years - whole_years) * 12))
             if months == 12:
                 whole_years += 1
                 months = 0
             sim_break_even_text = f"{whole_years} Years, {months} Months"
 
-        sim_20y_gross = sim_gross_yearly * 20
-        sim_20y_maint = sim_maint_yearly * 20
-        sim_20y_tax = 0
-        sim_20y_net = sim_net_yearly * 20
-        chart_donut_data = [sim_20y_net, sim_20y_maint, sim_20y_tax]
+        sim_proj_net = sim_net_yearly * projection_years
+        sim_proj_maint = sim_maint_yearly * projection_years
+        sim_proj_tax = 0
+        chart_donut_data = [sim_proj_net, sim_proj_maint, sim_proj_tax]
 
         # History Tracking
         is_simulation_update = 'project_cost' in request.GET
@@ -426,10 +479,12 @@ def dashboard_view(request):
             'sim_break_even_text': sim_break_even_text,
             'sim_projections': sim_projections,
             'simulation_history': simulation_history,
+            'projection_years': projection_years,
+            'min_projection_years': min_projection_years,
             
-            'chart_cumulative_data': chart_cumulative_data,
-            'chart_investment_data': chart_investment_data,
-            'chart_donut_data': chart_donut_data,
+            'chart_cumulative_data': json.dumps(chart_cumulative_data),
+            'chart_investment_data': json.dumps(chart_investment_data),
+            'chart_donut_data': json.dumps(chart_donut_data),
         })
         
 
