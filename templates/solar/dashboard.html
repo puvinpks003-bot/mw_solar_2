@@ -13,7 +13,16 @@
     </div>  
 
     <!-- Unified Inputs Panel (Python Driven) -->
-    <div x-data="{ isParamsOpen: true }" class="glass-card rounded-2xl overflow-hidden mb-8 border border-blue-500/30">
+    <div x-data="{ 
+          isParamsOpen: true,
+          monthlyGen: {{ sim_monthly_gen|default:0|floatformat:'-2' }},
+          ownUsage: {{ sim_own_usage|default:0|floatformat:'-2' }},
+          tariffRate: {{ sim_tariff_rate|default:0|floatformat:'-2' }},
+          maintVal: {{ sim_maint_val|default:0|floatformat:'-2' }},
+          get exportKwh() { return Math.max(0, Number(this.monthlyGen || 0) - Number(this.ownUsage || 0)); },
+          get exportValue() { return this.exportKwh * Number(this.tariffRate || 0); },
+          get profit() { return this.exportValue - Number(this.maintVal || 0); }
+      }" class="glass-card rounded-2xl overflow-hidden mb-8 border border-blue-500/30">
         <div @click="isParamsOpen = !isParamsOpen" class="p-6 border-b border-gray-800 bg-blue-900/10 cursor-pointer flex justify-between items-center hover:bg-blue-900/20 transition-colors">
             <div>
                 <h3 class="text-xl font-bold text-blue-400"><i class="fa-solid fa-sliders mr-2"></i> Project Parameters</h3>
@@ -40,43 +49,33 @@
                     
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-2">Monthly Import kWh</label>
-                        <input type="number" step="any" id="param_monthly_gen" name="monthly_gen" value="{{ sim_monthly_gen|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                        <input type="number" step="any" id="param_monthly_gen" name="monthly_gen" x-model.number="monthlyGen" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-2">Consumption kWh</label>
-                        <input type="number" step="any" id="param_own_usage" name="own_usage" value="{{ sim_own_usage|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                        <input type="number" step="any" id="param_own_usage" name="own_usage" x-model.number="ownUsage" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-2">Export kWh</label>
-                        <input type="text" readonly :value="formatNumber({{ sim_monthly_exported|default:0 }}, 2)" class="block w-full bg-gray-800 border border-gray-700 rounded-xl py-2 px-3 text-gray-400 cursor-not-allowed" />
+                        <input type="text" readonly :value="formatNumber(exportKwh, 2)" class="block w-full bg-gray-800 border border-gray-700 rounded-xl py-2 px-3 text-gray-400 cursor-not-allowed" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-2">Tariff Rate (₹)</label>
-                        <input type="number" step="any" id="param_tariff_rate" name="tariff_rate" value="{{ sim_tariff_rate|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                        <input type="number" step="any" id="param_tariff_rate" name="tariff_rate" x-model.number="tariffRate" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
                     </div>
 
-                    
-
-                    
-                    
-                    <!-- Calculated Displays (Read-Only) -->
-                     <div>
-                            <!-- <label class="block text-sm font-medium text-gray-400 mb-2">Maintenance Cost (₹)</label>
-                            <input type="number" step="any" id="param_maint_val" name="maint_val" value="{{ sim_maint_val|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" /> -->
-                    </div>
-                    
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-2">Export kWh Value (₹)</label>
-                        <input type="text" readonly :value="formatCurrency({{ sim_gross_monthly|default:0 }})" class="block w-full bg-gray-800 border border-gray-700 rounded-xl py-2 px-3 text-gray-400 cursor-not-allowed" />
+                        <input type="text" readonly :value="formatCurrency(exportValue)" class="block w-full bg-gray-800 border border-gray-700 rounded-xl py-2 px-3 text-gray-400 cursor-not-allowed" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-2">Maintenance Cost (₹)</label>
-                        <input type="number" step="any" id="param_maint_val" name="maint_val" value="{{ sim_maint_val|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                        <input type="number" step="any" id="param_maint_val" name="maint_val" x-model.number="maintVal" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-emerald-400 mb-2">Profit (₹)</label>
-                        <input type="text" readonly :value="formatCurrency({{ sim_net_monthly|default:0 }})" class="block w-full bg-gray-800 border border-emerald-900/50 rounded-xl py-2 px-3 text-emerald-400 font-bold cursor-not-allowed" />
+                        <input type="text" readonly :value="formatCurrency(profit)" class="block w-full bg-gray-800 border border-emerald-900/50 rounded-xl py-2 px-3 text-emerald-400 font-bold cursor-not-allowed" />
                     </div>
             
                     <!-- Hidden fields to preserve other required defaults -->
