@@ -6,6 +6,8 @@ from django.http import JsonResponse
 from django.db.models import Sum
 import datetime
 import json
+from django.http import JsonResponse
+from django.contrib.auth import logout
 
 from django.shortcuts import get_object_or_404
 
@@ -180,25 +182,44 @@ def dashboard_view(request):
         net_earnings = 0
         payment_status = "No Payments"
         
+        # Optimize DB Calls using Aggregation
+        readings = MeterReading.objects.filter(plant__in=plants)
+        payments = Payment.objects.filter(plant__in=plants)
+
+        # Monthly Stats
+        m_agg = readings.filter(
+            reading_date__month=today.month,
+            reading_date__year=today.year
+        ).aggregate(
+            m_gen=Sum('monthly_generation'),
+            m_own=Sum('self_consumption'),
+            m_exp=Sum('electricity_exported')
+        )
+        monthly_gen = m_agg['m_gen'] or 0
+        own_usage = m_agg['m_own'] or 0
+        monthly_exported_units = m_agg['m_exp'] or 0
+
+        # Total Stats
+        tot_agg = readings.aggregate(
+            t_gen=Sum('lifetime_generation'),
+            e_exp=Sum('electricity_exported')
+        )
+        lifetime_gen = tot_agg['t_gen'] or 0
+        exported_units = tot_agg['e_exp'] or 0
+
+        # Payments Stats
+        pay_agg = payments.aggregate(
+            g_rev=Sum('gross_revenue'),
+            m_chg=Sum('maintenance_charge'),
+            n_ear=Sum('net_earnings')
+        )
+        gross_revenue = pay_agg['g_rev'] or 0
+        maintenance = pay_agg['m_chg'] or 0
+        net_earnings = pay_agg['n_ear'] or 0
         yearly_data_dict = {}
-        
         for plant in plants:
-            readings = plant.readings.all()
-            todays_gen += sum(r.daily_generation for r in readings if r.reading_date == today)
-            monthly_gen += sum(r.monthly_generation for r in readings if r.reading_date.month == today.month and r.reading_date.year == today.year)
-            own_usage += sum(r.self_consumption for r in readings if r.reading_date.month == today.month and r.reading_date.year == today.year)
-            monthly_exported_units += sum(r.electricity_exported for r in readings if r.reading_date.month == today.month and r.reading_date.year == today.year)
-            
-            lifetime_gen += sum(r.lifetime_generation for r in readings)
-            exported_units += sum(r.electricity_exported for r in readings)
-            
-            payments = plant.payments.all()
-            for p in payments:
-                gross_revenue += p.gross_revenue
-                maintenance += p.maintenance_charge
-                net_earnings += p.net_earnings
-                
-                # Year-wise aggregation
+            plant_payments = plant.payments.all()
+            for p in plant_payments:
                 year = p.month.year
                 if year not in yearly_data_dict:
                     yearly_data_dict[year] = {
@@ -208,7 +229,7 @@ def dashboard_view(request):
                     }
                 yearly_data_dict[year]['profit'] += float(p.net_earnings)
                 
-            latest_payment = payments.order_by('-payment_date').first()
+            latest_payment = plant_payments.order_by('-payment_date').first()
             if latest_payment:
                 payment_status = latest_payment.get_payment_status_display()
         
@@ -623,6 +644,28 @@ def history_view(request):
 
 @login_required(login_url='login')
 def profile_view(request):
+    if request.method == 'POST':
+        user = request.user
+        full_name = request.POST.get('full_name', '').strip()
+        email = request.POST.get('email', '').strip()
+        profile_photo = request.FILES.get('profile_photo')
+        
+        if email and email != user.email:
+            if CustomUser.objects.filter(email=email).exclude(id=user.id).exists():
+                messages.error(request, "This email address is already in use.")
+                return render(request, 'solar/profile.html')
+            user.email = email
+            
+        if full_name:
+            user.full_name = full_name
+            
+        if profile_photo:
+            user.profile_photo = profile_photo
+            
+        user.save()
+        messages.success(request, "Profile updated successfully.")
+        return redirect('profile')
+        
     return render(request, 'solar/profile.html')
 
 @login_required(login_url='login')
@@ -630,5 +673,18 @@ def delete_calculation_view(request, calc_id):
     if request.method == 'POST':
         calc = get_object_or_404(SolarCalculation, id=calc_id, user=request.user)
         calc.delete()
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest' or request.accepts('application/json')
+        if is_ajax:
+            return JsonResponse({'status': 'success'})
         messages.success(request, "Calculation deleted successfully.")
     return redirect('history')
+
+@login_required(login_url='login')
+def delete_account_view(request):
+    if request.method == 'POST':
+        user = request.user
+        user.delete()
+        logout(request)
+        messages.success(request, "Your account has been permanently deleted. We're sorry to see you go!")
+        return redirect('landing')
+    return redirect('profile')

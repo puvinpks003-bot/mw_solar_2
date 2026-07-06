@@ -20,4 +20,5 @@ urlpatterns = [
     path('history/', views.history_view, name='history'),
     path('history/delete/<int:calc_id>/', views.delete_calculation_view, name='delete_calculation'),
     path('profile/', views.profile_view, name='profile'),
+    path('profile/delete/', views.delete_account_view, name='delete_account'),
 ]
