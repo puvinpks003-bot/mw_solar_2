@@ -302,7 +302,7 @@ def get_dashboard_context(request, target_user, view_only=False):
     sim_tax_pct = float(request.GET.get('tax_pct', def_tax_pct))
     
     projection_years = int(request.GET.get('projection_years', 20))
-    min_projection_years = 20
+    min_projection_years = 1
 
     # 2. Run Python Calculations
     sim_monthly_exported = max(0, sim_monthly_gen - sim_own_usage)
@@ -323,11 +323,6 @@ def get_dashboard_context(request, target_user, view_only=False):
     
     chart_cumulative_data = []
     chart_investment_data = []
-    chart_donut_data = [
-        float(sim_net_yearly),
-        float(sim_maint_val * 12),
-        float(sim_gross_monthly * 12 * (sim_tax_pct / 100))
-    ]
 
     for year in range(1, calc_years + 1):
         actual_year = start_year + year - 1
@@ -381,6 +376,18 @@ def get_dashboard_context(request, target_user, view_only=False):
                 'break_even_month': year_break_even_month
             })
 
+    # Truncate chart data to match the display years (max of requested projection_years or break-even year)
+    display_years = max(projection_years, min_projection_years) if min_projection_years > 0 else projection_years
+    months_to_display = display_years * 12
+    chart_cumulative_data = chart_cumulative_data[:months_to_display]
+    chart_investment_data = chart_investment_data[:months_to_display]
+    
+    chart_donut_data = [
+        float(sim_net_yearly * display_years),
+        float(sim_maint_val * 12 * display_years),
+        float(sim_gross_monthly * 12 * (sim_tax_pct / 100) * display_years)
+    ]
+
     # 3. Handle Saving the Simulation via GET if values changed
     # Only save if we are actively updating parameters (GET has project_cost) and not just loading from history
     is_simulation_update = 'project_cost' in request.GET and request.GET.get('load_history') != '1'
@@ -433,6 +440,7 @@ def get_dashboard_context(request, target_user, view_only=False):
         
         'projection_years': projection_years,
         'min_projection_years': min_projection_years,
+        'display_years': display_years,
         'sim_projections': sim_projections,
         'sim_break_even_text': sim_break_even_text,
         

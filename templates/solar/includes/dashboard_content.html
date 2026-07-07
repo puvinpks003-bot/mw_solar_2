@@ -138,10 +138,28 @@
                 <h3 class="text-xl font-bold text-emerald-400">Break-Even: {{ sim_break_even_text }}</h3>
                 <p class="text-sm text-gray-400 mt-1">Yearly Breakdown of ROI and Profit based on current inputs.</p>
                 
-                <div class="mt-4 flex items-center gap-3" x-data="{ years: {{ projection_years|default:20 }} }">
+                <div class="mt-4 flex items-center gap-3" x-data="{ years: {{ display_years|default:20 }} }">
                     <label class="text-sm text-gray-300 font-medium">Projection Years:</label>
                     <input type="number" x-model="years" min="{{ min_projection_years }}" class="bg-gray-800 text-white rounded-lg px-3 py-1.5 w-24 text-sm border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all">
-                    <button @click="document.getElementById('sim-form').insertAdjacentHTML('beforeend', `<input type=\'hidden\' name=\'projection_years\' value=\'${years}\'>`); document.getElementById('sim-form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));" class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 text-xs px-4 py-1.5 rounded-lg transition-colors font-medium">Update</button>
+                    <button @click="
+                        const form = document.getElementById('sim-form');
+                        if (form) {
+                            form.insertAdjacentHTML('beforeend', `<input type=\'hidden\' name=\'projection_years\' value=\'${years}\'>`);
+                            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                        } else {
+                            const url = new URL(window.location.href);
+                            url.searchParams.set('projection_years', years);
+                            if (typeof htmx !== 'undefined') {
+                                htmx.ajax('GET', url.toString(), {
+                                    target: '#dashboard-wrapper',
+                                    select: '#dashboard-wrapper',
+                                    swap: 'outerHTML'
+                                });
+                            } else {
+                                window.location.href = url.toString();
+                            }
+                        }
+                    " class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 text-xs px-4 py-1.5 rounded-lg transition-colors font-medium">Update</button>
                     <span class="text-xs text-gray-500 ml-2" x-show="years < {{ min_projection_years }}">Minimum: {{ min_projection_years }} (Investment Recovered)</span>
                 </div>
             </div>
@@ -251,17 +269,30 @@
                         <th class="px-6 py-4 font-medium">Export kWh (Yr)</th>
                         <th class="px-6 py-4 font-medium">Tariff</th>
                         <th class="px-6 py-4 font-medium">Net Profit (Yr)</th>
+                        {% if not view_only %}
                         <th class="px-6 py-4 font-medium text-center">Action</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
                     {% for h in simulation_history %}
-                        <tr id="row-{{ h.id }}" class="hover:bg-gray-800/30 transition-colors">
+                        <tr id="row-{{ h.id }}" 
+                            class="hover:bg-gray-800/30 transition-colors {% if view_only %}cursor-pointer{% endif %}"
+                            {% if view_only %}
+                            hx-get="{{ dashboard_url }}?project_cost={{ h.sim_project_cost|stringformat:'.0f' }}&monthly_gen={{ h.sim_monthly_gen|stringformat:'.2f' }}&own_usage={{ h.sim_own_usage|stringformat:'.2f' }}&tariff_rate={{ h.sim_tariff_rate|stringformat:'.2f' }}&maint_val={{ h.sim_maint_val|stringformat:'.2f' }}&tax_pct={{ h.sim_tax_pct|stringformat:'.2f' }}&load_history=1"
+                            hx-target="#dashboard-wrapper"
+                            hx-select="#dashboard-wrapper"
+                            hx-swap="outerHTML"
+                            hx-push-url="true"
+                            onclick="window.scrollTo({ top: 0, behavior: 'smooth' });"
+                            title="Click to view this projection"
+                            {% endif %}>
                             <td class="px-6 py-4 text-sm text-gray-300">{{ h.created_at|date:"M d, Y h:i A" }}</td>
                             <td class="px-6 py-4 text-sm text-blue-400">₹{{ h.formatted_project_cost }}</td>
                             <td class="px-6 py-4 text-sm text-purple-400">{{ h.formatted_export_kwh_yr }} kWh</td>
                             <td class="px-6 py-4 text-sm text-gray-300">₹{{ h.sim_tariff_rate }}/kWh</td>
                             <td class="px-6 py-4 text-sm text-emerald-400">₹{{ h.formatted_net_yearly }}</td>
+                            {% if not view_only %}
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-center gap-2">
                                     <a href="{{ dashboard_url }}?project_cost={{ h.sim_project_cost|stringformat:'.0f' }}&monthly_gen={{ h.sim_monthly_gen|stringformat:'.2f' }}&own_usage={{ h.sim_own_usage|stringformat:'.2f' }}&tariff_rate={{ h.sim_tariff_rate|stringformat:'.2f' }}&maint_val={{ h.sim_maint_val|stringformat:'.2f' }}&tax_pct={{ h.sim_tax_pct|stringformat:'.2f' }}&load_history=1" 
@@ -275,14 +306,9 @@
                                        title="Load this projection into Dashboard">
                                         <i class="fa-solid fa-chart-line"></i> Load
                                     </a>
-                                    <!-- <button type="button" 
-                                            onclick="window.dispatchEvent(new CustomEvent('open-delete-modal', { detail: { url: '{% url 'delete_calculation' h.id %}', id: '{{ h.id }}' } }))" 
-                                            class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-800 text-gray-400 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-all border border-gray-700 shadow-sm" 
-                                            title="Delete Record">
-                                        <i class="fa-solid fa-trash-can text-sm"></i>
-                                    </button> -->
                                 </div>
                             </td>
+                            {% endif %}
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -372,13 +398,13 @@
     <!-- Projections and Distribution Charts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div class="glass-card rounded-2xl p-6 shadow-xl shadow-black/40">
-            <h3 class="text-lg font-bold text-white mb-1">{{ projection_years }}-Year Financial Projection</h3>
+            <h3 class="text-lg font-bold text-white mb-1">{{ display_years }}-Year Financial Projection</h3>
             <p class="text-xs text-gray-400 mb-4">Cumulative Savings vs Cost <span class="text-blue-400">(Syncs with Simulator)</span></p>
             <div id="chartInvestmentGrowth" class="w-full h-72"></div>
         </div>
         
         <div class="glass-card rounded-2xl p-6 shadow-xl shadow-black/40">
-            <h3 class="text-lg font-bold text-white mb-1">Financial Breakdown ({{ projection_years }}y)</h3>
+            <h3 class="text-lg font-bold text-white mb-1">Financial Breakdown ({{ display_years }}y)</h3>
             <p class="text-xs text-gray-400 mb-4">Projected Earnings & Costs <span class="text-blue-400">(Syncs with Simulator)</span></p>
             <div id="chartFinancialBreakdown" class="w-full h-72 flex justify-center items-center"></div>
         </div>
@@ -542,6 +568,7 @@
                         let dateStr = new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric' }).format(new Date(bePoint[0]));
                         let valStr = this.formatCurrency(bePoint[1]);
                         
+                        let isNearEnd = breakEvenIndex > (cumulativeData.length * 0.7);
                         areaOptions.annotations = {
                             points: [{
                                 x: bePoint[0],
@@ -550,6 +577,8 @@
                                 label: {
                                     borderColor: '#10b981',
                                     offsetY: -10,
+                                    offsetX: isNearEnd ? -5 : 5,
+                                    textAnchor: isNearEnd ? 'end' : 'start',
                                     style: { color: '#fff', background: '#10b981', fontSize: '11px', fontWeight: 'bold' },
                                     text: `Break-Even: ${dateStr} (₹${valStr})`
                                 }

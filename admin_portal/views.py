@@ -68,9 +68,21 @@ def admin_dashboard_view(request):
         
     all_users = CustomUser.objects.filter(is_staff=False).order_by('-date_joined')
     all_calculations = SolarCalculation.objects.all().order_by('-created_at')
+    
+    # KPI Calculations
+    total_users = all_users.count()
+    total_simulations = all_calculations.count()
+    
+    # Calculate average project cost (ignoring null or 0)
+    valid_costs = [c.sim_project_cost for c in all_calculations if c.sim_project_cost and float(c.sim_project_cost) > 0]
+    average_cost = sum(valid_costs) / len(valid_costs) if valid_costs else 0
+    
     return render(request, 'admin_portal/admin_dashboard.html', {
         'all_users': all_users,
-        'all_calculations': all_calculations
+        'all_calculations': all_calculations,
+        'total_users': total_users,
+        'total_simulations': total_simulations,
+        'average_cost': average_cost,
     })
 
 @login_required(login_url='admin_portal:admin_auth')
