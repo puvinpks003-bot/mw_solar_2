@@ -1,0 +1,147 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}Admin Portal | MW Solar{% endblock %}
+
+{% block content %}
+<div class="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative z-10" x-data="{ mode: 'login' }">
+    <div class="max-w-md w-full space-y-8 glass-card p-10 rounded-3xl border border-blue-900/50 shadow-2xl shadow-blue-900/20" data-aos="zoom-in" data-aos-duration="800">
+        
+        <!-- Header -->
+        <div class="text-center">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-800 flex items-center justify-center mx-auto shadow-lg shadow-blue-500/30 mb-6 border border-blue-500/30">
+                <i class="fa-solid fa-user-shield text-white text-2xl"></i>
+            </div>
+            <h2 class="text-3xl font-extrabold text-white tracking-tight">Admin Portal</h2>
+            <p class="mt-2 text-sm text-gray-400">Authorized personnel only.</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="p-4 rounded-xl text-sm font-medium {% if message.tags == 'error' %}bg-red-900/50 border border-red-500/50 text-red-200{% else %}bg-green-900/50 border border-green-500/50 text-green-200{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Toggle Tabs -->
+        <div class="flex p-1 space-x-1 bg-gray-900/50 rounded-xl border border-gray-800">
+            <button @click="mode = 'login'" 
+                    class="w-full py-2.5 text-sm font-medium rounded-lg transition-all"
+                    :class="mode === 'login' ? 'bg-gray-800 text-white shadow' : 'text-gray-400 hover:text-gray-300'">
+                Log In
+            </button>
+            <button @click="mode = 'signup'" 
+                    class="w-full py-2.5 text-sm font-medium rounded-lg transition-all"
+                    :class="mode === 'signup' ? 'bg-gray-800 text-white shadow' : 'text-gray-400 hover:text-gray-300'">
+                Register Admin
+            </button>
+        </div>
+
+        <!-- Login Form -->
+        <form x-show="mode === 'login'" x-transition class="space-y-6" action="{% url 'admin_portal:admin_auth' %}" method="POST" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="login">
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Mobile Number</label>
+                    {{ login_form.mobile_number }}
+                </div>
+                <div x-data="{ showPassword: false }">
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Password</label>
+                    <div class="relative">
+                        {{ login_form.password }}
+                        <button type="button" @click="showPassword = !showPassword; $el.previousElementSibling.type = showPassword ? 'text' : 'password'" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                            <i class="fa-solid" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" 
+                    class="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-blue-600 hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-900 transition-all shadow-lg shadow-blue-600/30 overflow-hidden"
+                    :class="{'opacity-75 cursor-not-allowed': isSubmitting}">
+                <span x-show="!isSubmitting">Enter Portal</span>
+                <span x-show="isSubmitting" x-cloak><i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Authenticating...</span>
+            </button>
+        </form>
+
+        <!-- Signup Form -->
+        <form x-show="mode === 'signup'" x-transition class="space-y-6" action="{% url 'admin_portal:admin_auth' %}" method="POST" x-data="{ isSubmitting: false, showPassword: false, showConfirm: false, showPassphrase: false }" @submit="isSubmitting = true" style="display: none;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="signup">
+            
+            <div class="space-y-4">
+                <!-- Secret Passphrase (Admin specific) -->
+                <div>
+                    <label class="block text-sm font-medium text-purple-400 mb-2"><i class="fa-solid fa-key mr-1"></i> Admin Passphrase</label>
+                    <div class="relative">
+                        <input type="password" name="passphrase" required class="block w-full rounded-xl bg-gray-900/50 border border-purple-900/50 text-white placeholder-gray-500 focus:ring-purple-500 focus:border-purple-500 sm:text-sm px-4 py-3 transition-colors shadow-inner" placeholder="Enter the secret passphrase">
+                        <button type="button" @click="showPassphrase = !showPassphrase; $el.previousElementSibling.type = showPassphrase ? 'text' : 'password'" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                            <i class="fa-solid" :class="showPassphrase ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <hr class="border-gray-800">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Full Name</label>
+                    {{ signup_form.full_name }}
+                    {% if signup_form.full_name.errors %}
+                        <p class="text-red-400 text-xs mt-1">{{ signup_form.full_name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Mobile Number</label>
+                    {{ signup_form.mobile_number }}
+                    {% if signup_form.mobile_number.errors %}
+                        <p class="text-red-400 text-xs mt-1">{{ signup_form.mobile_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Email Address</label>
+                    {{ signup_form.email }}
+                    {% if signup_form.email.errors %}
+                        <p class="text-red-400 text-xs mt-1">{{ signup_form.email.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Password</label>
+                        <div class="relative">
+                            {{ signup_form.password }}
+                            <button type="button" @click="showPassword = !showPassword; $el.previousElementSibling.type = showPassword ? 'text' : 'password'" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                                <i class="fa-solid" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                            </button>
+                        </div>
+                        {% if signup_form.password.errors %}
+                            <p class="text-red-400 text-xs mt-1">{{ signup_form.password.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Confirm</label>
+                        <div class="relative">
+                            {{ signup_form.confirm_password }}
+                            <button type="button" @click="showConfirm = !showConfirm; $el.previousElementSibling.type = showConfirm ? 'text' : 'password'" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                                <i class="fa-solid" :class="showConfirm ? 'fa-eye-slash' : 'fa-eye'"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" 
+                    class="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-gray-900 transition-all shadow-lg shadow-indigo-600/30 overflow-hidden"
+                    :class="{'opacity-75 cursor-not-allowed': isSubmitting}">
+                <span x-show="!isSubmitting">Create Admin Account</span>
+                <span x-show="isSubmitting" x-cloak><i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Registering...</span>
+            </button>
+        </form>
+
+    </div>
+</div>
+{% endblock %}
