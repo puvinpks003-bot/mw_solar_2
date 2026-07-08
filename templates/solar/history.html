@@ -35,7 +35,7 @@
                 <tbody class="divide-y divide-gray-800">
                     {% for calc in calculations %}
                     <tr id="row-{{ calc.id }}" class="hover:bg-gray-800/30 transition-colors group">
-                        <td class="px-6 py-4 text-sm text-gray-300" data-sort="{{ calc.created_at|date:'Y-m-d H:i:s' }}">
+                        <td class="px-6 py-4 text-sm text-gray-300">
                             {{ calc.created_at|date:"M d, Y" }}
                         </td>
                         <td class="px-6 py-4 text-sm font-medium text-blue-400">
@@ -221,7 +221,6 @@
 <script>
     $(document).ready(function() {
         $('#historyTable').DataTable({
-            "order": [[ 0, "desc" ]],
             "pageLength": 10,
             "ordering": true,
             "info": true,
