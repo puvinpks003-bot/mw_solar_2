@@ -11,13 +11,16 @@
     <!-- Unified Inputs Panel (Python Driven) -->
     <div x-data="{ 
           isParamsOpen: true,
+          projectCost: {{ sim_project_cost|default:0|floatformat:'-2' }},
           monthlyGen: {{ sim_monthly_gen|default:0|floatformat:'-2' }},
           ownUsage: {{ sim_own_usage|default:0|floatformat:'-2' }},
           tariffRate: {{ sim_tariff_rate|default:0|floatformat:'-2' }},
           maintVal: {{ sim_maint_val|default:0|floatformat:'-2' }},
           get exportKwh() { return Math.max(0, Number(this.monthlyGen || 0) - Number(this.ownUsage || 0)); },
           get exportValue() { return this.exportKwh * Number(this.tariffRate || 0); },
-          get profit() { return this.exportValue - Number(this.maintVal || 0); }
+          get profit() { return this.exportValue - Number(this.maintVal || 0); },
+          get roi() { return this.projectCost > 0 ? ((this.profit * 12) / this.projectCost * 100) : 0; },
+          get payback() { return this.profit > 0 ? (this.projectCost / (this.profit * 12)) : 0; }
       }" class="glass-card rounded-2xl overflow-hidden mb-8 border border-blue-500/30">
         <div @click="isParamsOpen = !isParamsOpen" class="p-6 border-b border-gray-800 bg-blue-900/10 cursor-pointer flex justify-between items-center hover:bg-blue-900/20 transition-colors">
             <div>
@@ -40,7 +43,7 @@
                     <!-- Inputs -->
                     <div>
                         <label class="block text-sm font-medium text-gray-400 mb-2">Total Project Cost (₹)</label>
-                        <input type="number" step="any" id="param_project_cost" name="project_cost" value="{{ sim_project_cost|floatformat:'-2' }}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                        <input type="number" step="any" id="param_project_cost" name="project_cost" x-model.number="projectCost" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
                     </div>
                     
                     <div>
@@ -61,7 +64,11 @@
                         <input type="number" step="any" id="param_tariff_rate" name="tariff_rate" x-model.number="tariffRate" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
                     </div>
                     <div>
-                        <p></p>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Projection Years</label>
+                        <input type="number" name="projection_years" id="projection_years_input" value="{{ display_years|default:20 }}" min="{% if sim_break_even_text != 'Not Reached' %}{{ min_projection_years }}{% else %}1{% endif %}" class="block w-full bg-gray-900 border border-gray-700 rounded-xl py-2 px-3 text-white focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                        {% if sim_break_even_text != 'Not Reached' %}
+                        <p class="text-xs text-gray-500 mt-1">Minimum: {{ min_projection_years }} (Investment Recovered)</p>
+                        {% endif %}
                     </div>
 
                     <div>
@@ -75,6 +82,14 @@
                     <div>
                         <label class="block text-sm font-medium text-emerald-400 mb-2">Profit (₹)</label>
                         <input type="text" readonly :value="formatCurrency(profit)" class="block w-full bg-gray-800 border border-emerald-900/50 rounded-xl py-2 px-3 text-emerald-400 font-bold cursor-not-allowed" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-blue-400 mb-2">Est. ROI (Yearly)</label>
+                        <input type="text" readonly :value="formatNumber(roi, 1) + '%'" class="block w-full bg-gray-800 border border-blue-900/50 rounded-xl py-2 px-3 text-blue-400 font-bold cursor-not-allowed" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-purple-400 mb-2">Est. Payback</label>
+                        <input type="text" readonly :value="payback > 0 ? formatNumber(payback, 1) + ' Yrs' : 'N/A'" class="block w-full bg-gray-800 border border-purple-900/50 rounded-xl py-2 px-3 text-purple-400 font-bold cursor-not-allowed" />
                     </div>
             
                     <!-- Hidden fields to preserve other required defaults -->
@@ -137,31 +152,6 @@
             <div>
                 <h3 class="text-xl font-bold text-emerald-400">Break-Even: {{ sim_break_even_text }}</h3>
                 <p class="text-sm text-gray-400 mt-1">Yearly Breakdown of ROI and Profit based on current inputs.</p>
-                
-                <div class="mt-4 flex items-center gap-3" x-data="{ years: {{ display_years|default:20 }} }">
-                    <label class="text-sm text-gray-300 font-medium">Projection Years:</label>
-                    <input type="number" x-model="years" min="{{ min_projection_years }}" class="bg-gray-800 text-white rounded-lg px-3 py-1.5 w-24 text-sm border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all">
-                    <button @click="
-                        const form = document.getElementById('sim-form');
-                        if (form) {
-                            form.insertAdjacentHTML('beforeend', `<input type=\'hidden\' name=\'projection_years\' value=\'${years}\'>`);
-                            form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                        } else {
-                            const url = new URL(window.location.href);
-                            url.searchParams.set('projection_years', years);
-                            if (typeof htmx !== 'undefined') {
-                                htmx.ajax('GET', url.toString(), {
-                                    target: '#dashboard-wrapper',
-                                    select: '#dashboard-wrapper',
-                                    swap: 'outerHTML'
-                                });
-                            } else {
-                                window.location.href = url.toString();
-                            }
-                        }
-                    " class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/30 text-xs px-4 py-1.5 rounded-lg transition-colors font-medium">Update</button>
-                    <span class="text-xs text-gray-500 ml-2" x-show="years < {{ min_projection_years }}">Minimum: {{ min_projection_years }} (Investment Recovered)</span>
-                </div>
             </div>
             <div class="text-right hidden md:block">
                 <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Projected Yearly Profit</p>

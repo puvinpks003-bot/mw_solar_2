@@ -362,22 +362,28 @@ def get_dashboard_context(request, target_user, view_only=False):
         remaining_pct = max(0, ((sim_project_cost - cumulative) / sim_project_cost) * 100) if sim_project_cost > 0 else 0
         roi_pct = (sim_net_yearly / sim_project_cost * 100) if sim_project_cost > 0 else 0
         
-        # Only add to template projections if it's within the requested projection_years OR it's the break-even year
-        if year <= projection_years or year_is_break_even:
-            sim_projections.append({
-                'year': year,
-                'actual_year': actual_year,
-                'profit': round(sim_net_yearly, 2),
-                'cumulative': round(cumulative, 2),
-                'roi': round(roi_pct, 2),
-                'remaining_pct': round(remaining_pct, 2),
-                'months': months_data,
-                'is_break_even': year_is_break_even,
-                'break_even_month': year_break_even_month
-            })
+        # Add to template projections unconditionally; we will slice it later
+        sim_projections.append({
+            'year': year,
+            'actual_year': actual_year,
+            'profit': round(sim_net_yearly, 2),
+            'cumulative': round(cumulative, 2),
+            'roi': round(roi_pct, 2),
+            'remaining_pct': round(remaining_pct, 2),
+            'months': months_data,
+            'is_break_even': year_is_break_even,
+            'break_even_month': year_break_even_month
+        })
 
-    # Truncate chart data to match the display years (max of requested projection_years or break-even year)
-    display_years = max(projection_years, min_projection_years) if min_projection_years > 0 else projection_years
+    # Enforce minimum projection years if break-even is found
+    if is_break_even_found and projection_years < min_projection_years:
+        projection_years = min_projection_years
+        
+    # Truncate chart data to match the display years
+    display_years = projection_years
+    
+    # Slice the projections list to only show up to display_years
+    sim_projections = sim_projections[:display_years]
     months_to_display = display_years * 12
     chart_cumulative_data = chart_cumulative_data[:months_to_display]
     chart_investment_data = chart_investment_data[:months_to_display]
@@ -419,7 +425,8 @@ def get_dashboard_context(request, target_user, view_only=False):
                 sim_own_usage=sim_own_usage,
                 sim_tariff_rate=sim_tariff_rate,
                 sim_maint_val=sim_maint_val,
-                sim_tax_pct=sim_tax_pct
+                sim_tax_pct=sim_tax_pct,
+                sim_net_yearly=sim_net_yearly
             )
             context['force_redirect'] = True
             context['new_calc_id'] = new_calc.id
@@ -460,7 +467,8 @@ def dashboard_view(request):
     if request.user.is_staff:
         return redirect('admin_portal:admin_dashboard')
         
-    context = get_dashboard_context(request, request.user, view_only=False)
+    is_view_only = request.GET.get('view_only') == '1'
+    context = get_dashboard_context(request, request.user, view_only=is_view_only)
     
     if context.get('force_redirect'):
         if request.headers.get('HX-Request') == 'true':
@@ -468,11 +476,6 @@ def dashboard_view(request):
             return render(request, 'solar/dashboard.html', context)
         url = f"{reverse('dashboard')}?calc_id={context['new_calc_id']}"
         return redirect(url)
-        
-    # We must also ensure view_only from GET is respected (only if strictly requested)
-    is_view_only = request.GET.get('view_only') == '1'
-    if is_view_only:
-        context = get_dashboard_context(request, request.user, view_only=True)
         
     context['dashboard_url'] = reverse('dashboard')
     
