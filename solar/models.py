@@ -77,6 +77,45 @@ class SolarCalculation(models.Model):
 
     def __str__(self):
         return f"Calculation for {self.user.full_name} - {self.created_at.strftime('%Y-%m-%d')}"
+        
+    def format_inr(self, value):
+        if value is None: return "0"
+        try:
+            s = str(int(float(value)))
+        except (ValueError, TypeError):
+            return "0"
+        if len(s) <= 3: return s
+        res = s[-3:]
+        s = s[:-3]
+        while len(s) > 2:
+            res = s[-2:] + "," + res
+            s = s[:-2]
+        if s:
+            res = s + "," + res
+        return res
+
+    @property
+    def formatted_project_cost(self):
+        return self.format_inr(self.sim_project_cost)
+
+    @property
+    def formatted_net_yearly(self):
+        return self.format_inr(self.sim_net_yearly)
+        
+    @property
+    def sim_monthly_exported(self):
+        gen = self.sim_monthly_gen or 0
+        usage = self.sim_own_usage or 0
+        export = gen - usage
+        return export if export > 0 else 0
+
+    @property
+    def sim_export_kwh_yr(self):
+        return self.sim_monthly_exported * 12
+        
+    @property
+    def formatted_export_kwh_yr(self):
+        return self.format_inr(self.sim_export_kwh_yr)
     
     class Meta:
         ordering = ['-created_at']
