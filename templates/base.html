@@ -141,9 +141,9 @@
                 
                 <!-- Desktop Menu -->
                 <div class="hidden md:flex items-center space-x-8">
-                    <a href="{% url 'landing' %}" class="text-gray-300 hover:text-white transition-colors text-sm font-medium">Home</a>
+                    <!-- <a href="{% url 'landing' %}" class="text-gray-300 hover:text-white transition-colors text-sm font-medium">Home</a> -->
                     {% if user.is_authenticated %}
-                        <a href="{% url 'dashboard' %}" class="text-gray-300 hover:text-white transition-colors text-sm font-medium">Dashboard</a>
+                        <!-- <a href="{% url 'dashboard' %}" class="text-gray-300 hover:text-white transition-colors text-sm font-medium">Dashboard</a> -->
                         <!-- <a href="{% url 'calculator' %}" class="text-gray-300 hover:text-white transition-colors text-sm font-medium">Calculator</a> -->
                         <a href="{% url 'history' %}" class="text-gray-300 hover:text-white transition-colors text-sm font-medium">History</a>
                         
@@ -192,10 +192,10 @@
         <!-- Mobile Menu -->
         <div x-show="mobileMenuOpen" x-cloak class="md:hidden glass-panel border-t border-gray-800">
             <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                <a href="{% url 'landing' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Home</a>
+                <!-- <a href="{% url 'landing' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Home</a> -->
                 {% if user.is_authenticated %}
-                    <a href="{% url 'dashboard' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Dashboard</a>
-                    <a href="{% url 'calculator' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Calculator</a>
+                    <!-- <a href="{% url 'dashboard' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Dashboard</a> -->
+                    <!-- <a href="{% url 'calculator' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Calculator</a> -->
                     <a href="{% url 'history' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">History</a>
                     <a href="{% url 'profile' %}" class="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800">Profile Settings</a>
                     <a href="{% url 'logout' %}" class="block px-3 py-2 rounded-md text-base font-medium text-red-400 hover:text-red-300 hover:bg-gray-800">Logout</a>
@@ -240,7 +240,7 @@
                 <div>
                     <h3 class="text-sm font-semibold text-gray-300 tracking-wider uppercase">Product</h3>
                     <ul class="mt-4 space-y-2">
-                        <li><a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Calculator</a></li>
+                        <!-- <li><a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Calculator</a></li> -->
                         <li><a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Analytics</a></li>
                         <li><a href="#" class="text-gray-400 hover:text-white text-sm transition-colors">Pricing</a></li>
                     </ul>
