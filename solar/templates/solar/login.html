@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Log In | MW Solar{% endblock %}
+
+{% block content %}
+<div class="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative z-10">
+    <div class="max-w-md w-full space-y-8 glass-card p-10 rounded-3xl" data-aos="zoom-in" data-aos-duration="800">
+        <div>
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mx-auto shadow-lg shadow-blue-500/30 mb-6">
+                <i class="fa-solid fa-lock text-white text-2xl"></i>
+            </div>
+            <h2 class="text-center text-3xl font-extrabold text-white tracking-tight">Welcome back</h2>
+            <p class="mt-2 text-center text-sm text-gray-400">
+                Or <a href="{% url 'signup' %}" class="font-medium text-blue-400 hover:text-blue-300 transition-colors">create a new account</a>
+            </p>
+        </div>
+        
+        <form class="mt-8 space-y-6" action="{% url 'login' %}{% if request.GET.next %}?next={{ request.GET.next }}{% endif %}" method="POST" x-data="{ isSubmitting: false }" @submit="isSubmitting = true">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="bg-red-900/50 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg text-sm">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+            
+            <div class="space-y-4">
+                <div>
+                    <label for="{{ form.mobile_number.id_for_label }}" class="sr-only">Mobile Number</label>
+                    {{ form.mobile_number }}
+                    {% if form.mobile_number.errors %}
+                        <p class="text-red-400 text-xs mt-1">{{ form.mobile_number.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                <div x-data="{ showPassword: false }">
+                    <label for="{{ form.password.id_for_label }}" class="sr-only">Password</label>
+                    <div class="relative">
+                        {{ form.password }}
+                        <button type="button" @click="showPassword = !showPassword; $el.previousElementSibling.type = showPassword ? 'text' : 'password'" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-white focus:outline-none">
+                            <i class="fa-solid" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
+                    {% if form.password.errors %}
+                        <p class="text-red-400 text-xs mt-1">{{ form.password.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 bg-gray-800 border-gray-700 rounded text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-900">
+                    <label for="remember-me" class="ml-2 block text-sm text-gray-400">
+                        Remember me
+                    </label>
+                </div>
+
+                <div class="text-sm">
+                    <a href="#" @click.prevent="let m = document.getElementById('{{ form.mobile_number.id_for_label }}').value; window.location.href = '{% url 'password_reset' %}' + (m ? '?mobile=' + encodeURIComponent(m) : '');" class="font-medium text-blue-400 hover:text-blue-300 transition-colors">
+                        Forgot your password?
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" 
+                        class="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-900 transition-all shadow-lg shadow-blue-600/30 overflow-hidden"
+                        :class="{'opacity-75 cursor-not-allowed': isSubmitting}">
+                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <i class="fa-solid fa-arrow-right-to-bracket text-blue-300 group-hover:text-blue-200 transition-colors" x-show="!isSubmitting"></i>
+                        <i class="fa-solid fa-circle-notch fa-spin text-white" x-show="isSubmitting" x-cloak></i>
+                    </span>
+                    <span x-show="!isSubmitting">Log in</span>
+                    <span x-show="isSubmitting" x-cloak>Logging in...</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

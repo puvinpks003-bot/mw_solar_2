@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}MW Solar | Future of Energy{% endblock %}
+
+{% block content %}
+<div class="relative overflow-hidden">
+    
+    <!-- Hero Section -->
+    <div class="relative pt-24 pb-32 sm:pt-32 sm:pb-40 lg:pb-48 flex items-center justify-center min-h-[90vh]">
+        <div class="absolute inset-0 overflow-hidden">
+            <!-- Animated sun rays background -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-tr from-yellow-400/20 to-orange-500/20 rounded-full blur-[100px] animate-pulse"></div>
+        </div>
+        
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10" data-aos="fade-up" data-aos-duration="1000">
+            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-8">
+                <span class="block text-white mb-2">Reduce Your Electricity Bill</span>
+                <span class="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 animate-gradient-x">with MW Solar</span>
+            </h1>
+            
+            <p class="mt-4 max-w-2xl mx-auto text-xl text-gray-300 sm:mt-5 mb-10 leading-relaxed">
+                Calculate your future savings instantly using our intelligent solar investment calculator. 
+                Power your home, save money, and protect the planet.
+            </p>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8">
+                <a href="{% url 'signup' %}" class="w-full sm:w-auto px-8 py-4 rounded-full bg-white text-gray-900 font-bold text-lg hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                    Get Started
+                </a>
+                <!-- <a href="{% url 'calculator' %}" class="w-full sm:w-auto px-8 py-4 rounded-full glass-panel text-white font-bold text-lg hover:bg-gray-800 transition-colors border border-gray-600 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-calculator"></i> Calculate Savings
+                </a> -->
+                <a href="#" class="w-full sm:w-auto px-8 py-4 text-gray-300 font-medium text-lg hover:text-white transition-colors flex items-center justify-center gap-2 group">
+                    <div class="w-10 h-10 rounded-full border border-gray-500 flex items-center justify-center group-hover:border-white transition-colors">
+                        <i class="fa-solid fa-play ml-1"></i>
+                    </div>
+                    Watch Demo
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- How it works section (Glassmorphism cards) -->
+    <div class="py-24 bg-gray-950/50 relative z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16" data-aos="fade-up">
+                <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">Intelligent Solar Analytics</h2>
+                <p class="text-xl text-gray-400 max-w-3xl mx-auto">See exactly how much you can save with personalized AI-driven projections.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Card 1 -->
+                <div class="glass-card p-8 rounded-3xl transform transition duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-blue-500/20" data-aos="fade-up" data-aos-delay="100">
+                    <div class="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center mb-6 text-blue-400">
+                        <i class="fa-solid fa-bolt text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Input Your Bill</h3>
+                    <p class="text-gray-400 leading-relaxed">Simply enter your average monthly electricity bill to get started with your personalized projection.</p>
+                </div>
+                
+                <!-- Card 2 -->
+                <div class="glass-card p-8 rounded-3xl transform transition duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-500/20" data-aos="fade-up" data-aos-delay="200">
+                    <div class="w-14 h-14 rounded-2xl bg-purple-500/20 flex items-center justify-center mb-6 text-purple-400">
+                        <i class="fa-solid fa-chart-line text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Instant Calculation</h3>
+                    <p class="text-gray-400 leading-relaxed">Our engine calculates your required investment, ROI, break-even period, and 20-year savings instantly.</p>
+                </div>
+                
+                <!-- Card 3 -->
+                <div class="glass-card p-8 rounded-3xl transform transition duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-green-500/20" data-aos="fade-up" data-aos-delay="300">
+                    <div class="w-14 h-14 rounded-2xl bg-green-500/20 flex items-center justify-center mb-6 text-green-400">
+                        <i class="fa-solid fa-leaf text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3">Environmental Impact</h3>
+                    <p class="text-gray-400 leading-relaxed">Track not just your financial savings, but also your contribution to reducing carbon emissions.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+    @keyframes gradient-x {
+        0%, 100% {
+            background-size: 200% 200%;
+            background-position: left center;
+        }
+        50% {
+            background-size: 200% 200%;
+            background-position: right center;
+        }
+    }
+    .animate-gradient-x {
+        animation: gradient-x 8s ease infinite;
+    }
+</style>
+<script>
+    // GSAP Parallax setup if needed
+    gsap.to(".animate-pulse", {
+        yPercent: 20,
+        ease: "none",
+        scrollTrigger: {
+            trigger: ".relative",
+            start: "top top", 
+            end: "bottom top",
+            scrub: true
+        } 
+    });
+</script>
+{% endblock %}

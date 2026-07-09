@@ -432,6 +432,8 @@ def get_dashboard_context(request, target_user, view_only=False):
             context['new_calc_id'] = new_calc.id
 
     # Add all calculated variables to context
+    history_qs = SolarCalculation.objects.filter(user=target_user, sim_project_cost__isnull=False).order_by('-created_at')
+    
     context.update({
         'sim_project_cost': sim_project_cost,
         'sim_monthly_gen': sim_monthly_gen,
@@ -457,7 +459,7 @@ def get_dashboard_context(request, target_user, view_only=False):
         'chart_donut_data': json.dumps(chart_donut_data),
         
         # History
-        'simulation_history': SolarCalculation.objects.filter(user=target_user, sim_project_cost__isnull=False).order_by('-created_at')[:5]
+        'simulation_history': history_qs if getattr(request.user, 'is_staff', False) else history_qs[:5]
     })
     
     return context

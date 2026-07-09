@@ -37,7 +37,7 @@
                   hx-trigger="submit" 
                   hx-target="#dashboard-wrapper" 
                   hx-select="#dashboard-wrapper" 
-                  hx-swap="outerHTML"
+                  hx-swap="outerHTML show:window:top"
                   hx-push-url="true">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                     <!-- Inputs -->
@@ -106,7 +106,7 @@
     {% endif %}
 
     <!-- 7 KPI Cards for Simulator Results -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+    <div id="kpi-cards" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
         <div class="glass-card rounded-xl p-5 border-l-4 border-gray-400">
             <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Total Project Cost (₹)</p>
             <h3 class="text-2xl font-bold text-white">₹<span x-text="formatCurrency({{ sim_project_cost }})"></span></h3>
@@ -147,11 +147,37 @@
     </div>
 
     <!-- Live Year-Wise Table and Break-Even -->
-    <div class="glass-card rounded-2xl overflow-hidden mb-8 border border-gray-800">
+    <div id="break-even-card" class="glass-card rounded-2xl overflow-hidden mb-8 border border-gray-800">
         <div class="p-6 border-b border-gray-800 flex justify-between items-center bg-gray-900/30">
             <div>
                 <h3 class="text-xl font-bold text-emerald-400">Break-Even: {{ sim_break_even_text }}</h3>
-                <p class="text-sm text-gray-400 mt-1">Yearly Breakdown of ROI and Profit based on current inputs.</p>
+                <p class="text-sm text-gray-400 mt-1 mb-4">Yearly Breakdown of ROI and Profit based on current inputs.</p>
+                <form method="GET" action="{{ dashboard_url|default:'' }}" 
+                      hx-get="{{ dashboard_url|default:'' }}" 
+                      hx-target="#dashboard-wrapper" 
+                      hx-select="#dashboard-wrapper" 
+                      hx-swap="outerHTML" 
+                      hx-push-url="true"
+                      hx-on::before-request="window.savedScroll = window.scrollY; document.body.style.overflowAnchor = 'none'; document.body.style.minHeight = document.body.clientHeight + 'px';"
+                      hx-on::after-swap="window.scrollTo(0, window.savedScroll); setTimeout(() => { document.body.style.minHeight = ''; document.body.style.overflowAnchor = ''; }, 50);"
+                      class="flex items-center gap-3 w-max">
+                    <input type="hidden" name="project_cost" value="{{ sim_project_cost|stringformat:'.0f' }}">
+                    <input type="hidden" name="monthly_gen" value="{{ sim_monthly_gen|stringformat:'.2f' }}">
+                    <input type="hidden" name="own_usage" value="{{ sim_own_usage|stringformat:'.2f' }}">
+                    <input type="hidden" name="tariff_rate" value="{{ sim_tariff_rate|stringformat:'.2f' }}">
+                    <input type="hidden" name="maint_val" value="{{ sim_maint_val|stringformat:'.2f' }}">
+                    <input type="hidden" name="tax_pct" value="{{ sim_tax_pct|stringformat:'.2f' }}">
+                    {% if view_only %}
+                    <input type="hidden" name="view_only" value="1">
+                    {% endif %}
+                    
+                    <label for="inline_projection_years" class="text-sm font-medium text-gray-300">Projection Years:</label>
+                    <input type="number" id="inline_projection_years" name="projection_years" value="{{ display_years|default:20 }}" min="{% if sim_break_even_text != 'Not Reached' %}{{ min_projection_years }}{% else %}1{% endif %}" max="50" class="bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-1.5 w-20 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                    <button type="submit" class="bg-[#1e3a8a] hover:bg-[#1e40af] text-gray-200 border border-[#2563eb]/30 text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">Update</button>
+                    {% if sim_break_even_text != 'Not Reached' %}
+                    <span class="text-sm text-gray-500 ml-2">Minimum: {{ min_projection_years }} (Investment Recovered)</span>
+                    {% endif %}
+                </form>
             </div>
             <div class="text-right hidden md:block">
                 <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Projected Yearly Profit</p>
@@ -243,62 +269,66 @@
     
     <!-- Simulation History Table -->
     {% if simulation_history %}
-    <div id="simulation-history-widget" x-data="{ deleteModalOpen: false, deleteUrl: '', deleteId: '', isDeleting: false }" @open-delete-modal.window="deleteModalOpen = true; deleteUrl = $event.detail.url; deleteId = $event.detail.id" class="glass-card rounded-2xl overflow-hidden mb-8 border border-gray-800">
-        <div class="p-6 border-b border-gray-800 flex justify-between items-center bg-gray-900/30">
+    <div id="simulation-history-widget" x-data="{ isHistoryOpen: true, deleteModalOpen: false, deleteUrl: '', deleteId: '', isDeleting: false }" @open-delete-modal.window="deleteModalOpen = true; deleteUrl = $event.detail.url; deleteId = $event.detail.id" class="glass-card rounded-2xl overflow-hidden mb-8 border border-gray-800">
+        <div class="p-6 border-b border-gray-800 flex justify-between items-center bg-gray-900/30 cursor-pointer hover:bg-gray-800/40 transition-colors" @click="isHistoryOpen = !isHistoryOpen">
             <div>
                 <h3 class="text-xl font-bold text-blue-400"><i class="fa-solid fa-clock-rotate-left mr-2"></i> Simulation History</h3>
                 <p class="text-sm text-gray-400 mt-1">Your recent calculations. Click View to restore past parameters.</p>
             </div>
+            <div>
+                <i class="fa-solid text-gray-400 transition-transform" :class="isHistoryOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </div>
         </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+        <div x-show="isHistoryOpen" x-transition class="overflow-x-auto">
+            <table id="historyTable" class="w-full text-left border-collapse">
                 <thead class="bg-gray-900">
                     <tr class="text-gray-400 text-xs uppercase tracking-wider border-b border-gray-800">
                         <th class="px-6 py-4 font-medium">Date</th>
-                        <th class="px-6 py-4 font-medium">Total Project Cost</th>
+                        <th class="px-6 py-4 font-medium">Project Cost</th>
                         <th class="px-6 py-4 font-medium">Export kWh (Yr)</th>
+                        {% if view_only %}
+                        <th class="px-6 py-4 font-medium">Monthly KW</th>
+                        {% endif %}
                         <th class="px-6 py-4 font-medium">Tariff</th>
                         <th class="px-6 py-4 font-medium">Net Profit (Yr)</th>
-                        {% if not view_only %}
-                        <th class="px-6 py-4 font-medium text-center">Action</th>
-                        {% endif %}
+                        <th class="px-6 py-4 font-medium text-center">Action{% if view_only %}s{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-800">
                     {% for h in simulation_history %}
-                        <tr id="row-{{ h.id }}" 
-                            class="hover:bg-gray-800/30 transition-colors {% if view_only %}cursor-pointer{% endif %}"
-                            {% if view_only %}
-                            hx-get="{{ dashboard_url }}?project_cost={{ h.sim_project_cost|stringformat:'.0f' }}&monthly_gen={{ h.sim_monthly_gen|stringformat:'.2f' }}&own_usage={{ h.sim_own_usage|stringformat:'.2f' }}&tariff_rate={{ h.sim_tariff_rate|stringformat:'.2f' }}&maint_val={{ h.sim_maint_val|stringformat:'.2f' }}&tax_pct={{ h.sim_tax_pct|stringformat:'.2f' }}&load_history=1"
-                            hx-target="#dashboard-wrapper"
-                            hx-select="#dashboard-wrapper"
-                            hx-swap="outerHTML"
-                            hx-push-url="true"
-                            onclick="window.scrollTo({ top: 0, behavior: 'smooth' });"
-                            title="Click to view this projection"
-                            {% endif %}>
-                            <td class="px-6 py-4 text-sm text-gray-300">{{ h.created_at|date:"M d, Y h:i A" }}</td>
-                            <td class="px-6 py-4 text-sm text-blue-400">₹{{ h.formatted_project_cost }}</td>
+                        <tr id="row-{{ h.id }}" class="hover:bg-gray-800/30 transition-colors">
+                            <td class="px-6 py-4 text-sm text-gray-300" {% if view_only %}data-sort="{{ h.created_at|date:'Y-m-d H:i:s' }}"{% endif %}>{{ h.created_at|date:"M d, Y" }} {% if not view_only %}{{ h.created_at|date:"h:i A" }}{% endif %}</td>
+                            <td class="px-6 py-4 text-sm font-medium text-blue-400">₹{{ h.formatted_project_cost }}</td>
                             <td class="px-6 py-4 text-sm text-purple-400">{{ h.formatted_export_kwh_yr }} kWh</td>
+                            {% if view_only %}
+                            <td class="px-6 py-4 text-sm text-white">{{ h.sim_monthly_gen|floatformat:2 }} kW</td>
+                            {% endif %}
                             <td class="px-6 py-4 text-sm text-gray-300">₹{{ h.sim_tariff_rate }}/kWh</td>
                             <td class="px-6 py-4 text-sm text-emerald-400">₹{{ h.formatted_net_yearly }}</td>
-                            {% if not view_only %}
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-center gap-2">
-                                    <a href="{{ dashboard_url }}?project_cost={{ h.sim_project_cost|stringformat:'.0f' }}&monthly_gen={{ h.sim_monthly_gen|stringformat:'.2f' }}&own_usage={{ h.sim_own_usage|stringformat:'.2f' }}&tariff_rate={{ h.sim_tariff_rate|stringformat:'.2f' }}&maint_val={{ h.sim_maint_val|stringformat:'.2f' }}&tax_pct={{ h.sim_tax_pct|stringformat:'.2f' }}&load_history=1" 
+                                    <a href="{{ dashboard_url }}?project_cost={{ h.sim_project_cost|stringformat:'.0f' }}&monthly_gen={{ h.sim_monthly_gen|stringformat:'.2f' }}&own_usage={{ h.sim_own_usage|stringformat:'.2f' }}&tariff_rate={{ h.sim_tariff_rate|stringformat:'.2f' }}&maint_val={{ h.sim_maint_val|stringformat:'.2f' }}&tax_pct={{ h.sim_tax_pct|stringformat:'.2f' }}&load_history=1{% if view_only %}&view_only=1{% endif %}" 
                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 transition-all border border-blue-500/20 font-medium text-xs shadow-sm" 
+                                       {% if not view_only %}
                                        hx-get="{{ dashboard_url }}?project_cost={{ h.sim_project_cost|stringformat:'.0f' }}&monthly_gen={{ h.sim_monthly_gen|stringformat:'.2f' }}&own_usage={{ h.sim_own_usage|stringformat:'.2f' }}&tariff_rate={{ h.sim_tariff_rate|stringformat:'.2f' }}&maint_val={{ h.sim_maint_val|stringformat:'.2f' }}&tax_pct={{ h.sim_tax_pct|stringformat:'.2f' }}&load_history=1"
                                        hx-target="#dashboard-wrapper"
                                        hx-select="#dashboard-wrapper"
-                                       hx-swap="outerHTML"
+                                       hx-swap="outerHTML show:window:top"
                                        hx-push-url="true"
-                                       onclick="window.scrollTo({ top: 0, behavior: 'smooth' });"
+                                       {% endif %}
                                        title="Load this projection into Dashboard">
-                                        <i class="fa-solid fa-chart-line"></i> Load
+                                        <i class="fa-solid fa-chart-line"></i> {% if view_only %}View{% else %}Load{% endif %}
                                     </a>
+                                    {% if view_only %}
+                                    <button type="button" 
+                                            onclick="window.dispatchEvent(new CustomEvent('open-delete-modal', { detail: { url: '{% url 'delete_calculation' h.id %}', id: '{{ h.id }}' } }))" 
+                                            class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gray-800 text-gray-400 hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-all border border-gray-700 shadow-sm" 
+                                            title="Delete Record">
+                                        <i class="fa-solid fa-trash-can text-sm"></i>
+                                    </button>
+                                    {% endif %}
                                 </div>
                             </td>
-                            {% endif %}
                         </tr>
                     {% endfor %}
                 </tbody>

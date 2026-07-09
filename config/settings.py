@@ -82,9 +82,16 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 database_url = os.getenv("DATABASE_URL", "").strip().strip("'").strip('"')
-
+print('database_url : ',database_url)
 if database_url:
     tmpPostgres = urlparse(database_url)
+    
+    print('hostname :',tmpPostgres.hostname)
+    print('password :',tmpPostgres.password)
+    print('username :',tmpPostgres.username)
+    print('path :',tmpPostgres.path)
+    print('query :',tmpPostgres.query)
+    
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',

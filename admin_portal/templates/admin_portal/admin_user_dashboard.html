@@ -1,0 +1,119 @@
+{% extends 'admin_base.html' %}
+
+{% block title %}User Dashboard: {{ target_user.full_name }} | MW Solar Admin{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <!-- Back Button -->
+    <a href="{% url 'admin_portal:admin_dashboard' %}" class="inline-flex items-center text-sm font-medium text-gray-400 hover:text-white transition-colors mb-4">
+        <i class="fa-solid fa-arrow-left mr-2"></i> Back to Admin Dashboard
+    </a>
+
+    <div class="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 mb-4 flex items-center justify-between shadow-lg">
+        <div>
+            <h2 class="text-white font-bold text-lg flex items-center">
+                <i class="fa-solid fa-user-gear text-blue-400 mr-2"></i> 
+                Viewing Dashboard for: <span class="text-blue-400 ml-1">{{ target_user.full_name }}</span>
+            </h2>
+            <p class="text-xs text-gray-400 mt-1">
+                Joined: {{ target_user.date_joined|date:"M d, Y" }} | 
+                Email: {{ target_user.email|default:"N/A" }} | 
+                Phone: {{ target_user.mobile_number }}
+            </p>
+        </div>
+        <div class="hidden sm:block">
+            <span class="inline-flex items-center rounded-md bg-yellow-400/10 px-2 py-1 text-xs font-medium text-yellow-500 ring-1 ring-inset ring-yellow-400/20">
+                <i class="fa-solid fa-eye mr-1"></i> View Only Mode
+            </span>
+        </div>
+    </div>
+</div>
+
+{% include "solar/includes/dashboard_content.html" %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<style>
+    /* Dark mode overrides for DataTables */
+    .dataTables_wrapper .dataTables_length, .dataTables_wrapper .dataTables_filter, .dataTables_wrapper .dataTables_info, .dataTables_wrapper .dataTables_processing, .dataTables_wrapper .dataTables_paginate {
+        color: #9ca3af !important;
+        margin-bottom: 1rem;
+        margin-top: 1rem;
+        padding: 0 1.5rem;
+    }
+    .dataTables_wrapper .dataTables_length select {
+        background-color: #1f2937;
+        border: 1px solid #374151;
+        color: white;
+        border-radius: 0.375rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .dataTables_wrapper .dataTables_filter input {
+        background-color: #1f2937;
+        border: 1px solid #374151;
+        color: white;
+        border-radius: 0.375rem;
+        padding: 0.25rem 0.75rem;
+        margin-left: 0.5rem;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        color: #9ca3af !important;
+        border: 1px solid #374151 !important;
+        background: #1f2937 !important;
+        border-radius: 0.375rem;
+        margin-left: 0.25rem;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current, .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        color: white !important;
+        background: #3b82f6 !important;
+        border-color: #3b82f6 !important;
+    }
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        color: white !important;
+        background: #374151 !important;
+        border-color: #4b5563 !important;
+    }
+    table.dataTable.no-footer {
+        border-bottom: 1px solid #1f2937;
+    }
+    table.dataTable thead th, table.dataTable thead td {
+        border-bottom: 1px solid #1f2937;
+    }
+</style>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+    function initDataTable() {
+        if ($.fn.DataTable.isDataTable('#historyTable')) {
+            $('#historyTable').DataTable().destroy();
+        }
+        if ($('#historyTable').length) {
+            $('#historyTable').DataTable({
+                "order": [[ 0, "desc" ]],
+                "columnDefs": [
+                    { "orderable": false, "targets": 6 }
+                ],
+                "pageLength": 10,
+                "ordering": true,
+                "info": true,
+                "searching": true,
+                "lengthChange": true,
+                "language": {
+                    "search": "Filter records:",
+                    "lengthMenu": "Show _MENU_ entries per page"
+                }
+            });
+        }
+    }
+
+    $(document).ready(function() {
+        initDataTable();
+    });
+
+    document.body.addEventListener('htmx:afterSwap', function(event) {
+        initDataTable();
+    });
+</script>
+{% endblock %}

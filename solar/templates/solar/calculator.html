@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Calculator | MW Solar{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10" x-data="{ isCalculating: false }">
+    
+    <div class="text-center mb-12" data-aos="fade-down">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4">Investment Calculator</h1>
+        <p class="text-xl text-gray-400">Discover your potential savings and environmental impact.</p>
+    </div>
+
+    <div class="glass-card rounded-3xl p-8 md:p-12 relative overflow-hidden" data-aos="zoom-in" data-aos-delay="100">
+        
+        <!-- Decorative bg -->
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/20 rounded-full blur-[80px]"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-500/20 rounded-full blur-[80px]"></div>
+        
+        <form action="{% url 'calculator' %}" method="POST" @submit="isCalculating = true" class="relative z-10 space-y-8">
+            {% csrf_token %}
+            
+            <div class="space-y-4">
+                <label for="{{ form.monthly_bill.id_for_label }}" class="block text-xl font-medium text-gray-200">
+                    {{ form.monthly_bill.label }}
+                </label>
+                <div class="relative rounded-xl shadow-sm">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <span class="text-gray-400 sm:text-2xl">₹</span>
+                    </div>
+                    <!-- Form field widget has its own classes, we will inject pl-10 to override padding if needed, but since it's a Django widget, we used 'px-4'. 
+                         Let's just wrap it in a flex container if we wanted prefix, but simple padding works too. -->
+                    <input type="number" name="{{ form.monthly_bill.name }}" id="{{ form.monthly_bill.id_for_label }}" class="w-full pl-10 pr-4 py-5 rounded-xl bg-gray-900 border border-gray-700 text-white text-3xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors shadow-inner" placeholder="5000" min="100" required>
+                </div>
+                {% if form.monthly_bill.errors %}
+                    <p class="text-red-400 text-sm mt-2">{{ form.monthly_bill.errors.0 }}</p>
+                {% endif %}
+                <p class="text-gray-400 text-sm">Enter your average monthly electricity bill to calculate the required solar investment and your projected savings over 20 years.</p>
+            </div>
+
+            <div class="pt-4">
+                <button type="submit" 
+                        class="w-full flex justify-center items-center py-5 px-8 border border-transparent text-xl font-bold rounded-xl text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-900 transition-all shadow-lg shadow-blue-500/30 group overflow-hidden relative"
+                        :class="{'opacity-80 cursor-wait': isCalculating}">
+                    
+                    <!-- Shine effect -->
+                    <div class="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" x-show="!isCalculating"></div>
+
+                    <span x-show="!isCalculating" class="flex items-center">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-3 group-hover:rotate-12 transition-transform"></i> Calculate My Savings
+                    </span>
+                    <span x-show="isCalculating" x-cloak class="flex items-center">
+                        <i class="fa-solid fa-circle-notch fa-spin mr-3 text-white"></i> AI is calculating...
+                    </span>
+                </button>
+            </div>
+            
+            <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-800 pt-8 text-center text-gray-400">
+                <div class="flex flex-col items-center">
+                    <i class="fa-solid fa-bolt text-2xl mb-2 text-blue-400"></i>
+                    <span class="text-sm">Instant Results</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <i class="fa-solid fa-chart-line text-2xl mb-2 text-purple-400"></i>
+                    <span class="text-sm">20-Year Projection</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <i class="fa-solid fa-leaf text-2xl mb-2 text-green-400"></i>
+                    <span class="text-sm">Environmental Impact</span>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+    @keyframes shimmer {
+        100% {
+            transform: translateX(100%);
+        }
+    }
+</style>
+{% endblock %}
